@@ -69,17 +69,17 @@ namespace BezierComparador
             this.Size = new Size(1240, 760);
             this.MinimumSize = new Size(1020, 620);
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(245, 245, 245);
-            this.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            clsTemaUI.AplicarEstiloFormulario(this);
             this.DoubleBuffered = true;
 
             tipAyuda = new ToolTip();
+            clsTemaUI.ConfigurarToolTip(tipAyuda);
 
             pnlSuperior = new Panel();
             pnlSuperior.Dock = DockStyle.Top;
             pnlSuperior.Height = 105;
-            pnlSuperior.Padding = new Padding(12, 8, 12, 6);
-            pnlSuperior.BackColor = Color.White;
+            pnlSuperior.Padding = new Padding(clsTemaUI.EntEspacioMd, clsTemaUI.EntEspacioSm, clsTemaUI.EntEspacioMd, 6);
+            pnlSuperior.BackColor = clsTemaUI.ColSuperficieTarjeta;
 
             grpConfiguracion = new GroupBox();
             grpConfiguracion.Text = "Configuracion, pruebas de estabilidad (grados 50 y 100) y exportacion para el informe";
@@ -102,10 +102,7 @@ namespace BezierComparador
             btnEjecutar.Text = "Ejecutar pruebas";
             btnEjecutar.Location = new Point(222, 22);
             btnEjecutar.Size = new Size(138, 30);
-            btnEjecutar.BackColor = Color.FromArgb(0, 102, 204);
-            btnEjecutar.ForeColor = Color.White;
-            btnEjecutar.FlatStyle = FlatStyle.Flat;
-            btnEjecutar.Cursor = Cursors.Hand;
+            clsTemaUI.AplicarEstiloBotonPrimario(btnEjecutar);
             btnEjecutar.Click += BtnEjecutar_Click;
             tipAyuda.SetToolTip(btnEjecutar, "Ejecuta los experimentos de rendimiento y actualiza tabla y graficos");
 
@@ -113,10 +110,7 @@ namespace BezierComparador
             btnEstabilidad.Text = "Estabilidad (n=50, 100)";
             btnEstabilidad.Location = new Point(368, 22);
             btnEstabilidad.Size = new Size(162, 30);
-            btnEstabilidad.BackColor = Color.FromArgb(40, 140, 70);
-            btnEstabilidad.ForeColor = Color.White;
-            btnEstabilidad.FlatStyle = FlatStyle.Flat;
-            btnEstabilidad.Cursor = Cursors.Hand;
+            clsTemaUI.AplicarEstiloBotonExito(btnEstabilidad);
             btnEstabilidad.Click += BtnEstabilidad_Click;
             tipAyuda.SetToolTip(btnEstabilidad, "Compara grados 50 y 100 contra referencia decimal de 128 bits");
 
@@ -124,9 +118,7 @@ namespace BezierComparador
             btnExportarCsv.Text = "Exportar CSV";
             btnExportarCsv.Location = new Point(538, 22);
             btnExportarCsv.Size = new Size(118, 30);
-            btnExportarCsv.BackColor = Color.White;
-            btnExportarCsv.FlatStyle = FlatStyle.System;
-            btnExportarCsv.Cursor = Cursors.Hand;
+            clsTemaUI.AplicarEstiloBotonSecundario(btnExportarCsv);
             btnExportarCsv.Click += BtnExportarCsv_Click;
             tipAyuda.SetToolTip(btnExportarCsv, "Exporta la tabla de resultados y estabilidad a un archivo CSV");
 
@@ -134,9 +126,7 @@ namespace BezierComparador
             btnGuardarPng.Text = "Guardar PNG";
             btnGuardarPng.Location = new Point(664, 22);
             btnGuardarPng.Size = new Size(118, 30);
-            btnGuardarPng.BackColor = Color.White;
-            btnGuardarPng.FlatStyle = FlatStyle.System;
-            btnGuardarPng.Cursor = Cursors.Hand;
+            clsTemaUI.AplicarEstiloBotonSecundario(btnGuardarPng);
             btnGuardarPng.Click += BtnGuardarPng_Click;
             tipAyuda.SetToolTip(btnGuardarPng, "Guarda los dos graficos comparativos en formato PNG para el informe LaTeX");
 
@@ -194,13 +184,13 @@ namespace BezierComparador
 
             dgvResultados = new DataGridView();
             dgvResultados.Dock = DockStyle.Fill;
-            dgvResultados.BackgroundColor = Color.White;
             dgvResultados.AllowUserToAddRows = false;
             dgvResultados.AllowUserToDeleteRows = false;
             dgvResultados.ReadOnly = true;
             dgvResultados.RowHeadersVisible = false;
             dgvResultados.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvResultados.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            clsTemaUI.AplicarEstiloDataGridView(dgvResultados);
             ConfigurarColumnasTabla();
 
             grpResultados.Controls.Add(dgvResultados);

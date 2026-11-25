@@ -53,18 +53,18 @@ namespace BezierComparador
             this.Size = new Size(1240, 760);
             this.MinimumSize = new Size(980, 660);
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(245, 245, 245);
-            this.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            clsTemaUI.AplicarEstiloFormulario(this);
             this.DoubleBuffered = true;
 
             tipAyuda = new ToolTip();
+            clsTemaUI.ConfigurarToolTip(tipAyuda);
 
             // Panel lateral derecho blanco con los 3 GroupBox obligatorios
             pnlLateral = new Panel();
             pnlLateral.Dock = DockStyle.Right;
             pnlLateral.Width = 360;
-            pnlLateral.BackColor = Color.White;
-            pnlLateral.Padding = new Padding(12);
+            pnlLateral.BackColor = clsTemaUI.ColSuperficieTarjeta;
+            pnlLateral.Padding = new Padding(clsTemaUI.EntEspacioMd);
 
             // 1. GroupBox: Puntos de control
             grpPuntosControl = new GroupBox();
@@ -86,7 +86,7 @@ namespace BezierComparador
             btnCurvaEjemplo.Text = "Cargar curva grado 3";
             btnCurvaEjemplo.Location = new Point(12, 154);
             btnCurvaEjemplo.Size = new Size(150, 30);
-            btnCurvaEjemplo.Cursor = Cursors.Hand;
+            clsTemaUI.AplicarEstiloBotonSecundario(btnCurvaEjemplo);
             btnCurvaEjemplo.Click += BtnCurvaEjemplo_Click;
             tipAyuda.SetToolTip(btnCurvaEjemplo, "Carga 4 puntos de control de ejemplo para una curva cubica");
 
@@ -94,7 +94,7 @@ namespace BezierComparador
             btnLimpiar.Text = "Limpiar lienzo";
             btnLimpiar.Location = new Point(174, 154);
             btnLimpiar.Size = new Size(150, 30);
-            btnLimpiar.Cursor = Cursors.Hand;
+            clsTemaUI.AplicarEstiloBotonPeligroSuave(btnLimpiar);
             btnLimpiar.Click += BtnLimpiar_Click;
             tipAyuda.SetToolTip(btnLimpiar, "Elimina todos los puntos de control del lienzo");
 
@@ -220,10 +220,7 @@ namespace BezierComparador
             btnMedir.Text = "Medir curva actual (Stopwatch 10 rep)";
             btnMedir.Location = new Point(12, 146);
             btnMedir.Size = new Size(312, 32);
-            btnMedir.BackColor = Color.FromArgb(0, 102, 204);
-            btnMedir.ForeColor = Color.White;
-            btnMedir.FlatStyle = FlatStyle.Flat;
-            btnMedir.Cursor = Cursors.Hand;
+            clsTemaUI.AplicarEstiloBotonPrimario(btnMedir);
             btnMedir.Click += BtnMedir_Click;
             tipAyuda.SetToolTip(btnMedir, "Mide 10 repeticiones con calentamiento de la curva dibujada");
 
@@ -231,11 +228,7 @@ namespace BezierComparador
             btnAbrirLaboratorio.Text = "Abrir Laboratorio y Graficos Comparativos";
             btnAbrirLaboratorio.Location = new Point(12, 186);
             btnAbrirLaboratorio.Size = new Size(312, 36);
-            btnAbrirLaboratorio.BackColor = Color.FromArgb(40, 140, 70);
-            btnAbrirLaboratorio.ForeColor = Color.White;
-            btnAbrirLaboratorio.FlatStyle = FlatStyle.Flat;
-            btnAbrirLaboratorio.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            btnAbrirLaboratorio.Cursor = Cursors.Hand;
+            clsTemaUI.AplicarEstiloBotonExito(btnAbrirLaboratorio);
             btnAbrirLaboratorio.Click += BtnAbrirLaboratorio_Click;
             tipAyuda.SetToolTip(btnAbrirLaboratorio, "Abre la ventana frmPruebas con la tabla de experimentos y los graficos Tiempo vs Muestras/Grado");
 
