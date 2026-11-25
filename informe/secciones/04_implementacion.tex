@@ -1,0 +1,264 @@
+\section{Implementacion del Sistema BezierComparador}
+\label{sec:implementacion}
+
+En esta seccion se describe la implementacion completa del sistema \textit{BezierComparador}, abarcando las tecnologias seleccionadas, la arquitectura de software basada en el patron Modelo--Vista--Controlador (MVC), el diagrama de clases, las convenciones de nomenclatura, el manual de usuario de la interfaz grafica y las decisiones de diseno de la experiencia de usuario (UI/UX).
+
+\subsection{Tecnologias Utilizadas}
+\label{subsec:impl_tecnologias}
+
+El desarrollo del sistema se realizo empleando el siguiente conjunto de tecnologias, seleccionadas por su compatibilidad con los requerimientos de rendimiento, precision y construccion de interfaces graficas de escritorio:
+
+\begin{table}[H]
+\centering
+\caption{Tecnologias y herramientas empleadas en el desarrollo de BezierComparador.}
+\label{tab:impl_tecnologias}
+\begin{tabular}{p{3.8cm} p{10.5cm}}
+\toprule
+\textbf{Tecnologia} & \textbf{Justificacion de Uso} \\
+\midrule
+Lenguaje C\# & Lenguaje orientado a objetos con tipado fuerte y soporte nativo para aritmetica de punto flotante en \texttt{double} (64 bits) y \texttt{decimal} (128 bits), lo cual resulta esencial para las pruebas de estabilidad numerica. \\
+\midrule
+Windows Forms & Framework de interfaz grafica que proporciona acceso directo al objeto \texttt{Graphics} de GDI+ para el dibujo personalizado con \texttt{DrawLine}, \texttt{FillEllipse} y \texttt{DrawString}, sin depender de funciones predefinidas de curvas. \\
+\midrule
+.NET 8.0 & Plataforma de ejecucion con compilacion JIT optimizada, recoleccion de basura generacional y soporte para \texttt{async/await} en la ejecucion paralela de los experimentos sin bloquear la interfaz grafica. \\
+\midrule
+\texttt{System.Diagnostics.Stopwatch} & Temporizador de alta resolucion basado en el contador de rendimiento del hardware del procesador (QPC), con precision de microsegundos, utilizado para medir exclusivamente el tiempo del calculo matematico. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Arquitectura de Software: Patron MVC}
+\label{subsec:impl_arquitectura}
+
+El sistema se estructura siguiendo el patron de diseno \textbf{Modelo--Vista--Controlador (MVC)}, separando la logica matematica de la presentacion visual y la coordinacion de los experimentos. La Figura~\ref{fig:impl_diagrama_clases} presenta el diagrama de clases completo del sistema.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    clase/.style={rectangle, draw=black!70, fill=blue!5, minimum width=4.6cm, minimum height=1.2cm, text centered, font=\footnotesize\ttfamily, rounded corners=2pt, thick},
+    interfaz/.style={rectangle, draw=black!70, fill=green!8, minimum width=4.6cm, minimum height=1.2cm, text centered, font=\footnotesize\ttfamily, rounded corners=2pt, thick, dashed},
+    flecha/.style={->, >=stealth, thick, black!70},
+    implementa/.style={->, >=stealth, thick, dashed, black!50},
+    usa/.style={->, >=stealth, thick, dotted, blue!60},
+    etiqueta/.style={font=\scriptsize\sffamily, fill=white, inner sep=1.5pt}
+]
+% --- CAPA MODELO ---
+\node[clase] (puntocontrol) at (0, 0) {clsPuntoControl};
+\node[clase] (curvabezier) at (5.8, 0) {clsCurvaBezier};
+\node[interfaz] (ievaluador) at (0, -2.2) {$\langle\langle$interfaz$\rangle\rangle$ \\ IEvaluadorCurva};
+\node[clase] (bernstein) at (-3.5, -4.4) {clsEvaluadorBernstein};
+\node[clase] (casteljau) at (3.5, -4.4) {clsEvaluadorDeCasteljau};
+\node[clase] (resultado) at (0, -6.6) {clsResultadoEvaluacion};
+\node[clase] (medidor) at (5.8, -2.2) {clsMedidor};
+\node[clase] (comparador) at (11, -2.2) {clsComparador};
+\node[clase] (rescomp) at (11, -4.4) {clsResultadoComparacion};
+
+% --- CAPA CONTROLADOR ---
+\node[clase, fill=orange!8] (controlador) at (5.8, -6.6) {clsControladorPruebas};
+\node[clase, fill=orange!8] (filaprueba) at (11, -6.6) {clsFilaPrueba};
+\node[clase, fill=orange!8] (filaestab) at (11, -8.8) {clsFilaEstabilidad};
+
+% --- CAPA VISTA ---
+\node[clase, fill=yellow!10] (frmpruebas) at (5.8, -8.8) {frmPruebas};
+\node[clase, fill=yellow!10] (pnldoble) at (0, -8.8) {pnlGraficoDobleBuffer};
+
+% --- RELACIONES ---
+\draw[flecha] (curvabezier) -- node[etiqueta, above] {contiene} (puntocontrol);
+\draw[implementa] (bernstein) -- (ievaluador);
+\draw[implementa] (casteljau) -- (ievaluador);
+\draw[usa] (bernstein) -- (resultado);
+\draw[usa] (casteljau) -- (resultado);
+\draw[usa] (medidor) -- (ievaluador);
+\draw[usa] (medidor) -- (resultado);
+\draw[usa] (comparador) -- (rescomp);
+\draw[usa] (controlador) -- (medidor);
+\draw[usa] (controlador) -- (comparador);
+\draw[usa] (controlador) -- (filaprueba);
+\draw[usa] (controlador) -- (filaestab);
+\draw[flecha] (frmpruebas) -- node[etiqueta, right] {delega} (controlador);
+\draw[flecha] (frmpruebas) -- (pnldoble);
+
+% --- ETIQUETAS DE CAPA ---
+\node[font=\small\bfseries\sffamily, text=blue!70] at (-4.5, 0.8) {MODELO};
+\node[font=\small\bfseries\sffamily, text=orange!70] at (-4.5, -6.6) {CONTROLADOR};
+\node[font=\small\bfseries\sffamily, text=yellow!50!black] at (-4.5, -8.8) {VISTA};
+\end{tikzpicture}
+}%
+\caption{Diagrama de clases del sistema BezierComparador organizado por capas MVC. Las flechas continuas representan composicion, las discontinuas implementacion de interfaz y las punteadas relaciones de uso.}
+\label{fig:impl_diagrama_clases}
+\end{figure}
+
+\subsubsection{Responsabilidades de Cada Clase}
+
+En el Cuadro~\ref{tab:impl_clases} se detallan las clases del sistema, su capa MVC correspondiente y sus responsabilidades principales.
+
+\begin{table}[H]
+\centering
+\caption{Clases del sistema BezierComparador, capa MVC y responsabilidades.}
+\label{tab:impl_clases}
+\footnotesize
+\begin{tabular}{p{3.5cm} l p{8.5cm}}
+\toprule
+\textbf{Clase / Interfaz} & \textbf{Capa} & \textbf{Responsabilidades} \\
+\midrule
+\texttt{clsPuntoControl} & Modelo & Encapsula las coordenadas $(x, y)$ de un punto 2D en el plano cartesiano mediante campos \texttt{dblX} y \texttt{dblY} con sus propiedades de acceso. \\
+\midrule
+\texttt{clsCurvaBezier} & Modelo & Gestiona la lista de puntos de control de una curva de Bezier. Ofrece metodos para agregar, eliminar, modificar y limpiar puntos, asi como para obtener el grado $n = \texttt{Count} - 1$. \\
+\midrule
+\texttt{IEvaluadorCurva} & Modelo & Interfaz (contrato) que define la firma del metodo \texttt{Evaluar} y la propiedad \texttt{CadNombre}, garantizando intercambiabilidad entre los evaluadores. \\
+\midrule
+\texttt{clsEvaluadorBernstein} & Modelo & Implementa \texttt{IEvaluadorCurva} evaluando la curva mediante la formula explicita $C(t) = \sum_{i=0}^{n} \binom{n}{i}(1-t)^{n-i}t^i P_i$ con coeficientes binomiales precalculados mediante recurrencia iterativa. \\
+\midrule
+\texttt{clsEvaluadorDeCasteljau} & Modelo & Implementa \texttt{IEvaluadorCurva} evaluando la curva mediante interpolaciones lineales sucesivas $P_i^{(r)} = (1-t)P_i^{(r-1)} + tP_{i+1}^{(r-1)}$ en arreglos de trabajo. Incluye el metodo \texttt{ObtenerNivelesIntermedios} para visualizar los poligonos intermedios. \\
+\midrule
+\texttt{clsResultadoEvaluacion} & Modelo & Almacena los puntos calculados de la curva y las metricas de tiempo: promedio, minimo, maximo y desviacion estandar en milisegundos. \\
+\midrule
+\texttt{clsMedidor} & Modelo & Ejecuta el protocolo de medicion de rendimiento: calentamiento previo (descarte de JIT), $M \ge 10$ repeticiones independientes con \texttt{Stopwatch} y calculo de estadisticas de tiempo. \\
+\midrule
+\texttt{clsComparador} & Modelo & Calcula la distancia euclidiana punto a punto $d_k$ entre dos curvas evaluadas y reporta el error maximo, el error promedio y el error cuadratico medio (ECM). \\
+\midrule
+\texttt{clsResultadoComparacion} & Modelo & Estructura de datos que almacena las tres metricas de diferencia numerica entre dos curvas. \\
+\midrule
+\texttt{clsControladorPruebas} & Controlador & Coordina la ejecucion de los $24$ casos experimentales, genera puntos aleatorios reproducibles con semilla fija, ejecuta la prueba de estabilidad contra referencia \texttt{decimal} de 128 bits y exporta los resultados a CSV. \\
+\midrule
+\texttt{clsFilaPrueba} & Controlador & Almacena los datos de una fila de resultados: grado, muestras, tiempos de ambos metodos, errores y metodo mas rapido. \\
+\midrule
+\texttt{clsFilaEstabilidad} & Controlador & Almacena los datos de estabilidad numerica en grados altos: errores de cada metodo frente a la referencia decimal y metodo mas estable. \\
+\midrule
+\texttt{frmPruebas} & Vista & Ventana principal de experimentacion que contiene la tabla de resultados (\texttt{DataGridView}), los botones de ejecucion, estabilidad y exportacion, la barra de progreso y los paneles de graficos comparativos. \\
+\midrule
+\texttt{pnlGraficoDobleBuffer} & Vista & Panel heredado de \texttt{Panel} con \texttt{DoubleBuffered = true} para evitar parpadeo (flicker) durante el redibujado de los graficos. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Convenciones de Nomenclatura: Notacion Hungara en Espanol}
+\label{subsubsec:impl_notacion}
+
+Todas las variables, campos, metodos y clases del proyecto siguen la \textbf{notacion hungara adaptada al espanol}, donde cada identificador incluye un prefijo de tres letras que indica su tipo de dato. Esta convencion garantiza la legibilidad inmediata del codigo y la consistencia en todo el equipo de desarrollo. En el Cuadro~\ref{tab:impl_notacion} se documentan los prefijos utilizados.
+
+\begin{table}[H]
+\centering
+\caption{Prefijos de la notacion hungara en espanol empleados en el proyecto.}
+\label{tab:impl_notacion}
+\begin{tabular}{llp{7cm}}
+\toprule
+\textbf{Prefijo} & \textbf{Tipo de Dato} & \textbf{Ejemplo} \\
+\midrule
+\texttt{ent} & \texttt{int} (entero) & \texttt{entGrado}, \texttt{entMuestras}, \texttt{entRepeticiones} \\
+\texttt{dbl} & \texttt{double} (doble precision) & \texttt{dblX}, \texttt{dblTiempoPromedioMs}, \texttt{dblSumaX} \\
+\texttt{cad} & \texttt{string} (cadena) & \texttt{cadNombreMetodo}, \texttt{cadMetodoMasRapido} \\
+\texttt{bol} & \texttt{bool} (booleano) & \texttt{bolEjecutando} \\
+\texttt{obj} & objeto (instancia de clase) & \texttt{objMedidor}, \texttt{objReloj}, \texttt{objResultado} \\
+\texttt{lst} & \texttt{List<>} (lista generica) & \texttt{lstPuntosControl}, \texttt{lstResultados} \\
+\texttt{arr} & arreglo (\texttt{[]}) & \texttt{arrCoeficientes}, \texttt{arrTiemposMs}, \texttt{arrCurva} \\
+\texttt{cls} & clase & \texttt{clsPuntoControl}, \texttt{clsMedidor}, \texttt{clsCurvaBezier} \\
+\texttt{frm} & formulario (ventana) & \texttt{frmPruebas} \\
+\texttt{btn} & boton & \texttt{btnEjecutar}, \texttt{btnEstabilidad}, \texttt{btnExportarCsv} \\
+\texttt{lbl} & etiqueta & \texttt{lblEstado}, \texttt{lblRepeticiones} \\
+\texttt{dgv} & \texttt{DataGridView} & \texttt{dgvResultados} \\
+\texttt{pnl} & panel & \texttt{pnlGraficoMuestras}, \texttt{pnlSuperior} \\
+\texttt{num} & \texttt{NumericUpDown} & \texttt{numRepeticiones} \\
+\texttt{cmb} & \texttt{ComboBox} & \texttt{cmbGradoFijo}, \texttt{cmbMuestrasFijas} \\
+\texttt{grp} & \texttt{GroupBox} & \texttt{grpConfiguracion}, \texttt{grpResultados} \\
+\texttt{prg} & \texttt{ProgressBar} & \texttt{prgProgreso} \\
+\texttt{tip} & \texttt{ToolTip} & \texttt{tipAyuda} \\
+\texttt{spl} & \texttt{SplitContainer} & \texttt{splContenedor} \\
+\texttt{tbl} & \texttt{TableLayoutPanel} & \texttt{tblGraficos} \\
+\texttt{dlg} & dialogo de archivo & \texttt{dlgGuardar}, \texttt{dlgCarpeta} \\
+\texttt{col} & color & \texttt{colVerdeGanador} \\
+\texttt{dec} & \texttt{decimal} (128 bits) & \texttt{decT}, \texttt{decUnoMenosT} \\
+\texttt{pen} & \texttt{Pen} (lapiz GDI+) & \texttt{penBernstein}, \texttt{penCasteljau} \\
+\texttt{brs} & \texttt{Brush} (brocha GDI+) & \texttt{brsBernstein}, \texttt{brsTexto} \\
+\texttt{fnt} & \texttt{Font} (fuente) & \texttt{fntTitulo}, \texttt{fntEjes} \\
+\texttt{bmp} & \texttt{Bitmap} & \texttt{bmpImagen} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Manual de Usuario}
+\label{subsec:impl_manual}
+
+La aplicacion \textit{BezierComparador} se ejecuta desde la ventana principal \texttt{frmPruebas}, que constituye el punto de entrada del programa. A continuacion se describen las operaciones disponibles para el usuario.
+
+\subsubsection{Ventana Principal: Laboratorio de Pruebas}
+\label{subsubsec:impl_ventana_principal}
+
+La ventana principal se divide en tres regiones claramente diferenciadas, como se ilustra en la Figura~\ref{fig:impl_ventana_principal}:
+
+\begin{enumerate}
+    \item \textbf{Panel superior de configuracion:} Contiene el selector de repeticiones (\texttt{numRepeticiones}, minimo 10), el boton \textit{Ejecutar pruebas} (azul), el boton \textit{Estabilidad (n=50, 100)} (verde), los botones de exportacion \textit{Exportar CSV} y \textit{Guardar PNG}, la barra de progreso y la etiqueta de estado.
+    \item \textbf{Tabla de resultados:} Un \texttt{DataGridView} de solo lectura con nueve columnas: Grado ($n$), Muestras ($N$), Bernstein Prom (ms), Bernstein Desv (ms), De Casteljau Prom (ms), De Casteljau Desv (ms), Error Maximo, Error Promedio y Metodo Mas Rapido. Las celdas del metodo ganador se resaltan en verde claro.
+    \item \textbf{Panel de graficos comparativos:} Dos paneles con doble buffer que muestran los graficos de \textit{Tiempo vs Muestras} (grado fijo) y \textit{Tiempo vs Grado} (muestras fijas), con filtros \texttt{ComboBox} para seleccionar los valores fijos. La leyenda identifica la serie azul como Bernstein y la naranja como De Casteljau.
+\end{enumerate}
+
+\capturaPendiente{14cm}{7cm}{Ventana principal del Laboratorio de Pruebas (frmPruebas) mostrando el panel de configuracion, la tabla de resultados con resaltado en verde y los graficos comparativos.}{fig:impl_ventana_principal}
+
+\subsubsection{Ejecucion de Pruebas de Rendimiento}
+\label{subsubsec:impl_ejecutar}
+
+Al presionar el boton \textit{Ejecutar pruebas}, la aplicacion realiza las siguientes acciones de forma asincrona (sin bloquear la interfaz grafica):
+
+\begin{enumerate}
+    \item Deshabilita los controles de entrada para evitar ejecuciones simultaneas.
+    \item Itera sobre las $6 \times 4 = 24$ combinaciones de grado y muestras, generando para cada caso un conjunto de puntos de control pseudoaleatorios con semilla fija (\texttt{12345 + n}).
+    \item Para cada combinacion, invoca al \texttt{clsMedidor} que ejecuta $M$ repeticiones con calentamiento previo, cronometrando exclusivamente el calculo matematico con \texttt{Stopwatch}.
+    \item Calcula las diferencias numericas punto a punto entre ambos metodos con \texttt{clsComparador}.
+    \item Actualiza la tabla, ejecuta la prueba de estabilidad en grados $50$ y $100$, y redibuja los graficos.
+\end{enumerate}
+
+\subsubsection{Visualizacion de Interpolaciones de De Casteljau}
+\label{subsubsec:impl_interpolaciones}
+
+La clase \texttt{clsEvaluadorDeCasteljau} expone el metodo \texttt{ObtenerNivelesIntermedios}, que retorna la lista completa de poligonos intermedios $P_i^{(r)}$ para un valor fijo del parametro $t$. Cuando se activa esta visualizacion, la aplicacion dibuja los segmentos de cada nivel $r$ con colores diferenciados, permitiendo al usuario observar graficamente como la recurrencia de interpolacion lineal converge desde el poligono de control original ($r = 0$) hasta el punto final sobre la curva ($r = n$).
+
+\capturaPendiente{12cm}{6cm}{Curva de Bezier de grado 3 con cuatro puntos de control, mostrando la curva evaluada por ambos metodos superpuestos.}{fig:impl_curva_grado3}
+
+\capturaPendiente{12cm}{6cm}{Interpolaciones de De Casteljau con $t = 0.5$ para una curva de grado 3, mostrando los poligonos intermedios de cada nivel $r$ en colores diferenciados.}{fig:impl_interpolaciones}
+
+\subsubsection{Prueba de Estabilidad Numerica}
+\label{subsubsec:impl_estabilidad}
+
+El boton \textit{Estabilidad (n=50, 100)} ejecuta la prueba especializada de estabilidad que compara ambos evaluadores en doble precision contra una referencia calculada en aritmetica \texttt{decimal} de 128 bits. Los resultados se presentan en un cuadro de dialogo detallado (\texttt{MessageBox}) que muestra, para cada grado, el error maximo de cada metodo frente a la referencia y el metodo considerado mas estable.
+
+\subsubsection{Exportacion de Resultados}
+\label{subsubsec:impl_exportacion}
+
+La aplicacion ofrece dos mecanismos de exportacion orientados a la generacion del informe en \LaTeX:
+
+\begin{itemize}
+    \item \textbf{Exportar CSV:} Genera un archivo de valores separados por comas con todas las filas de resultados y las filas de estabilidad, utilizando formato invariante (\texttt{CultureInfo.InvariantCulture}) para garantizar compatibilidad con herramientas de analisis.
+    \item \textbf{Guardar PNG:} Renderiza los dos graficos comparativos (\textit{Tiempo vs Muestras} y \textit{Tiempo vs Grado}) en imagenes de $800 \times 480$ pixeles en formato PNG, listas para ser incluidas directamente en el documento \LaTeX\ con \texttt{\textbackslash includegraphics}.
+\end{itemize}
+
+\capturaPendiente{14cm}{7cm}{Ventana de pruebas (frmPruebas) tras completar la ejecucion de los 24 casos experimentales, mostrando tabla, graficos y barra de estado.}{fig:impl_ventana_pruebas}
+
+\subsection{Decisiones de Diseno UI/UX}
+\label{subsec:impl_uiux}
+
+El diseno visual de la interfaz se guio por los siguientes principios de usabilidad y consistencia:
+
+\begin{enumerate}
+    \item \textbf{Paleta de colores con significado funcional:}
+    \begin{itemize}
+        \item \textbf{Azul} (\texttt{RGB(0, 102, 204)}): Identifica visualmente al metodo de polinomios de Bernstein en botones, graficos y leyendas.
+        \item \textbf{Naranja} (\texttt{RGB(230, 115, 0)}): Identifica al algoritmo de De Casteljau.
+        \item \textbf{Verde claro} (\texttt{RGB(200, 242, 205)}): Resalta el metodo ganador (mas rapido) en cada fila de la tabla de resultados.
+        \item \textbf{Verde oscuro} (\texttt{RGB(40, 140, 70)}): Color del boton de estabilidad numerica, diferenciandolo del boton de ejecucion.
+        \item \textbf{Fondo gris claro} (\texttt{RGB(245, 245, 245)}): Fondo general de la ventana para reducir la fatiga visual.
+        \item \textbf{Fondo blanco}: Paneles de graficos, tabla de resultados y panel de configuracion.
+    \end{itemize}
+
+    \item \textbf{Distribucion espacial con SplitContainer:} La ventana utiliza un \texttt{SplitContainer} horizontal con la tabla en el panel superior y los graficos en el inferior, permitiendo al usuario redimensionar ambas secciones segun su preferencia. El tamano minimo de la ventana es de $1020 \times 660$ pixeles.
+
+    \item \textbf{Tooltips informativos:} Cada control interactivo posee un \texttt{ToolTip} explicativo que describe su funcion al posicionar el cursor sobre el, facilitando el uso sin necesidad de un manual externo. Ejemplos: ``\textit{Cantidad de repeticiones por prueba (con calentamiento previo)}'' sobre \texttt{numRepeticiones} y ``\textit{Ejecuta los experimentos de rendimiento y actualiza tabla y graficos}'' sobre \texttt{btnEjecutar}.
+
+    \item \textbf{Doble buffer (\textit{double buffering}):} Los paneles de graficos utilizan la clase personalizada \texttt{pnlGraficoDobleBuffer} (heredada de \texttt{Panel}) con la propiedad \texttt{DoubleBuffered = true} y \texttt{ResizeRedraw = true}, eliminando el parpadeo (\textit{flicker}) durante el redibujado y garantizando una experiencia visual fluida al redimensionar la ventana o actualizar los datos.
+
+    \item \textbf{Retroalimentacion de progreso:} La barra de progreso (\texttt{prgProgreso}) y la etiqueta de estado (\texttt{lblEstado}) mantienen al usuario informado del avance de la ejecucion experimental, mostrando el grado y la cantidad de muestras que se estan evaluando en cada momento.
+
+    \item \textbf{Graficos exclusivamente con primitivas basicas:} Todos los graficos comparativos se construyen utilizando unicamente \texttt{DrawLine} para los ejes, las guias, las series de datos y las leyendas, \texttt{FillEllipse} para los marcadores circulares y \texttt{DrawString} para las etiquetas. Esta decision refuerza la restriccion pedagogica del proyecto de no emplear funciones predefinidas que generen curvas o graficos automaticamente.
+\end{enumerate}
+
+% RESUMEN: Esta seccion (04_implementacion.tex) contiene las tecnologias (Cuadro tab:impl_tecnologias), el diagrama de clases con TikZ (Figura fig:impl_diagrama_clases), la tabla de clases y responsabilidades (Cuadro tab:impl_clases), la tabla de notacion hungara (Cuadro tab:impl_notacion), el manual de usuario (ejecucion, interpolaciones, estabilidad, exportacion) y las decisiones de diseno UI/UX (colores, SplitContainer, tooltips, doble buffer, graficos con DrawLine). Capturas pendientes: fig:impl_ventana_principal, fig:impl_curva_grado3, fig:impl_interpolaciones, fig:impl_ventana_pruebas. El equipo debe verificar que las etiquetas sec:fundamentos, sec:estado_arte, sec:experimentacion, sec:comparacion y sec:conclusiones existan en las secciones correspondientes.
