@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -16,7 +18,7 @@ namespace BezierComparador
         }
     }
 
-    // Ventana de experimentacion, tabla comparativa y graficos de rendimiento
+    // Ventana de experimentacion, tabla comparativa, graficos, estabilidad y exportacion
     public class frmPruebas : Form
     {
         private clsControladorPruebas objControladorPruebas;
@@ -25,11 +27,15 @@ namespace BezierComparador
         private Label lblRepeticiones = null!;
         private NumericUpDown numRepeticiones = null!;
         private Button btnEjecutar = null!;
+        private Button btnEstabilidad = null!;
+        private Button btnExportarCsv = null!;
+        private Button btnGuardarPng = null!;
         private ProgressBar prgProgreso = null!;
         private Label lblEstado = null!;
         private SplitContainer splContenedor = null!;
         private GroupBox grpResultados = null!;
         private DataGridView dgvResultados = null!;
+        private Label lblResumenEstabilidad = null!;
         private GroupBox grpGraficos = null!;
         private Panel pnlFiltroGraficos = null!;
         private Label lblGradoFijo = null!;
@@ -53,12 +59,12 @@ namespace BezierComparador
             InicializarComponentes();
         }
 
-        // Configura los controles visuales, tabla y paneles de graficos
+        // Configura los controles visuales, tabla, botones de exportacion y paneles de graficos
         private void InicializarComponentes()
         {
             this.Text = "Laboratorio de Pruebas: Bernstein vs De Casteljau";
-            this.Size = new Size(1180, 780);
-            this.MinimumSize = new Size(960, 640);
+            this.Size = new Size(1240, 800);
+            this.MinimumSize = new Size(1020, 660);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(245, 245, 245);
             this.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
@@ -68,54 +74,88 @@ namespace BezierComparador
 
             pnlSuperior = new Panel();
             pnlSuperior.Dock = DockStyle.Top;
-            pnlSuperior.Height = 85;
+            pnlSuperior.Height = 105;
             pnlSuperior.Padding = new Padding(12, 8, 12, 6);
             pnlSuperior.BackColor = Color.White;
 
             grpConfiguracion = new GroupBox();
-            grpConfiguracion.Text = "Configuracion de experimentos (Grados: 2, 3, 5, 10, 20, 50 | Muestras: 100 a 100000)";
+            grpConfiguracion.Text = "Configuracion, pruebas de estabilidad (grados 50 y 100) y exportacion para el informe";
             grpConfiguracion.Dock = DockStyle.Fill;
 
             lblRepeticiones = new Label();
             lblRepeticiones.Text = "Repeticiones (min 10):";
-            lblRepeticiones.Location = new Point(16, 30);
+            lblRepeticiones.Location = new Point(14, 28);
             lblRepeticiones.AutoSize = true;
 
             numRepeticiones = new NumericUpDown();
             numRepeticiones.Minimum = 10;
             numRepeticiones.Maximum = 100;
             numRepeticiones.Value = 10;
-            numRepeticiones.Location = new Point(155, 27);
-            numRepeticiones.Width = 65;
+            numRepeticiones.Location = new Point(150, 25);
+            numRepeticiones.Width = 60;
             tipAyuda.SetToolTip(numRepeticiones, "Cantidad de repeticiones por prueba (con calentamiento previo)");
 
             btnEjecutar = new Button();
             btnEjecutar.Text = "Ejecutar pruebas";
-            btnEjecutar.Location = new Point(235, 24);
-            btnEjecutar.Size = new Size(145, 32);
+            btnEjecutar.Location = new Point(222, 22);
+            btnEjecutar.Size = new Size(138, 30);
             btnEjecutar.BackColor = Color.FromArgb(0, 102, 204);
             btnEjecutar.ForeColor = Color.White;
             btnEjecutar.FlatStyle = FlatStyle.Flat;
             btnEjecutar.Cursor = Cursors.Hand;
             btnEjecutar.Click += BtnEjecutar_Click;
-            tipAyuda.SetToolTip(btnEjecutar, "Ejecuta los experimentos y actualiza la tabla y los graficos");
+            tipAyuda.SetToolTip(btnEjecutar, "Ejecuta los experimentos de rendimiento y actualiza tabla y graficos");
+
+            btnEstabilidad = new Button();
+            btnEstabilidad.Text = "Estabilidad (n=50, 100)";
+            btnEstabilidad.Location = new Point(368, 22);
+            btnEstabilidad.Size = new Size(162, 30);
+            btnEstabilidad.BackColor = Color.FromArgb(40, 140, 70);
+            btnEstabilidad.ForeColor = Color.White;
+            btnEstabilidad.FlatStyle = FlatStyle.Flat;
+            btnEstabilidad.Cursor = Cursors.Hand;
+            btnEstabilidad.Click += BtnEstabilidad_Click;
+            tipAyuda.SetToolTip(btnEstabilidad, "Compara grados 50 y 100 contra referencia decimal de 128 bits");
+
+            btnExportarCsv = new Button();
+            btnExportarCsv.Text = "Exportar CSV";
+            btnExportarCsv.Location = new Point(538, 22);
+            btnExportarCsv.Size = new Size(118, 30);
+            btnExportarCsv.BackColor = Color.White;
+            btnExportarCsv.FlatStyle = FlatStyle.System;
+            btnExportarCsv.Cursor = Cursors.Hand;
+            btnExportarCsv.Click += BtnExportarCsv_Click;
+            tipAyuda.SetToolTip(btnExportarCsv, "Exporta la tabla de resultados y estabilidad a un archivo CSV");
+
+            btnGuardarPng = new Button();
+            btnGuardarPng.Text = "Guardar PNG";
+            btnGuardarPng.Location = new Point(664, 22);
+            btnGuardarPng.Size = new Size(118, 30);
+            btnGuardarPng.BackColor = Color.White;
+            btnGuardarPng.FlatStyle = FlatStyle.System;
+            btnGuardarPng.Cursor = Cursors.Hand;
+            btnGuardarPng.Click += BtnGuardarPng_Click;
+            tipAyuda.SetToolTip(btnGuardarPng, "Guarda los dos graficos comparativos en formato PNG para el informe LaTeX");
 
             prgProgreso = new ProgressBar();
-            prgProgreso.Location = new Point(395, 28);
-            prgProgreso.Size = new Size(210, 24);
+            prgProgreso.Location = new Point(795, 25);
+            prgProgreso.Size = new Size(190, 24);
             prgProgreso.Minimum = 0;
             prgProgreso.Maximum = 100;
             prgProgreso.Value = 0;
 
             lblEstado = new Label();
-            lblEstado.Text = "Estado: Listo. Presione Ejecutar pruebas para iniciar.";
-            lblEstado.Location = new Point(620, 31);
+            lblEstado.Text = "Estado: Listo. Presione Ejecutar pruebas o Estabilidad para iniciar.";
+            lblEstado.Location = new Point(14, 62);
             lblEstado.AutoSize = true;
-            lblEstado.ForeColor = Color.FromArgb(50, 50, 50);
+            lblEstado.ForeColor = Color.FromArgb(45, 45, 45);
 
             grpConfiguracion.Controls.Add(lblRepeticiones);
             grpConfiguracion.Controls.Add(numRepeticiones);
             grpConfiguracion.Controls.Add(btnEjecutar);
+            grpConfiguracion.Controls.Add(btnEstabilidad);
+            grpConfiguracion.Controls.Add(btnExportarCsv);
+            grpConfiguracion.Controls.Add(btnGuardarPng);
             grpConfiguracion.Controls.Add(prgProgreso);
             grpConfiguracion.Controls.Add(lblEstado);
             pnlSuperior.Controls.Add(grpConfiguracion);
@@ -123,13 +163,20 @@ namespace BezierComparador
             splContenedor = new SplitContainer();
             splContenedor.Dock = DockStyle.Fill;
             splContenedor.Orientation = Orientation.Horizontal;
-            splContenedor.SplitterDistance = 310;
+            splContenedor.SplitterDistance = 320;
             splContenedor.Padding = new Padding(12, 6, 12, 12);
 
             grpResultados = new GroupBox();
             grpResultados.Text = "Tabla de resultados (en verde el metodo mas rapido por fila)";
             grpResultados.Dock = DockStyle.Fill;
             grpResultados.Padding = new Padding(8);
+
+            lblResumenEstabilidad = new Label();
+            lblResumenEstabilidad.Dock = DockStyle.Bottom;
+            lblResumenEstabilidad.Height = 24;
+            lblResumenEstabilidad.Text = "Estabilidad numerica (grados 50 y 100 vs referencia decimal): pendiente de ejecucion.";
+            lblResumenEstabilidad.ForeColor = Color.FromArgb(0, 80, 40);
+            lblResumenEstabilidad.TextAlign = ContentAlignment.MiddleLeft;
 
             dgvResultados = new DataGridView();
             dgvResultados.Dock = DockStyle.Fill;
@@ -143,6 +190,7 @@ namespace BezierComparador
             ConfigurarColumnasTabla();
 
             grpResultados.Controls.Add(dgvResultados);
+            grpResultados.Controls.Add(lblResumenEstabilidad);
             splContenedor.Panel1.Controls.Add(grpResultados);
 
             grpGraficos = new GroupBox();
@@ -265,7 +313,7 @@ namespace BezierComparador
             pnlGraficoGrados.Invalidate();
         }
 
-        // Ejecuta los experimentos de forma asincrona y actualiza tabla y graficos
+        // Ejecuta los experimentos de forma asincrona y actualiza tabla, estabilidad y graficos
         private async void BtnEjecutar_Click(object? objRemitente, EventArgs objArgumentos)
         {
             if (bolEjecutando)
@@ -275,6 +323,7 @@ namespace BezierComparador
 
             bolEjecutando = true;
             btnEjecutar.Enabled = false;
+            btnEstabilidad.Enabled = false;
             numRepeticiones.Enabled = false;
             dgvResultados.Rows.Clear();
             prgProgreso.Value = 0;
@@ -300,16 +349,151 @@ namespace BezierComparador
             List<clsFilaPrueba> lstFilas = await Task.Run(() =>
                 objControladorPruebas.EjecutarTodasLasPruebas(entRepeticiones, objReporteProgreso));
 
+            List<clsFilaEstabilidad> lstEst = await Task.Run(() =>
+                objControladorPruebas.EjecutarPruebaEstabilidad(1000));
+
             lstDatosActuales = new List<clsFilaPrueba>(lstFilas);
             PoblarTablaResultados(lstDatosActuales);
+            ActualizarEtiquetaEstabilidad(lstEst);
             pnlGraficoMuestras.Invalidate();
             pnlGraficoGrados.Invalidate();
 
             prgProgreso.Value = 100;
-            lblEstado.Text = "Estado: Pruebas completadas (" + lstDatosActuales.Count + " combinaciones evaluadas).";
+            lblEstado.Text = "Estado: Pruebas y analisis de estabilidad completados.";
             btnEjecutar.Enabled = true;
+            btnEstabilidad.Enabled = true;
             numRepeticiones.Enabled = true;
             bolEjecutando = false;
+        }
+
+        // Ejecuta y muestra el reporte detallado de estabilidad numerica en grados 50 y 100
+        private async void BtnEstabilidad_Click(object? objRemitente, EventArgs objArgumentos)
+        {
+            if (bolEjecutando)
+            {
+                return;
+            }
+
+            bolEjecutando = true;
+            btnEstabilidad.Enabled = false;
+            lblEstado.Text = "Estado: Evaluando estabilidad en grados 50 y 100 contra referencia decimal...";
+
+            List<clsFilaEstabilidad> lstEst = await Task.Run(() =>
+                objControladorPruebas.EjecutarPruebaEstabilidad(1000));
+
+            ActualizarEtiquetaEstabilidad(lstEst);
+            lblEstado.Text = "Estado: Prueba de estabilidad numerica completada.";
+            btnEstabilidad.Enabled = true;
+            bolEjecutando = false;
+
+            string cadMensaje = "Prueba de estabilidad numerica (1000 muestras vs referencia decimal 128 bits):\n\n";
+            for (int entI = 0; entI < lstEst.Count; entI++)
+            {
+                clsFilaEstabilidad objEst = lstEst[entI];
+                cadMensaje += "Grado n = " + objEst.entGrado + ":\n";
+                cadMensaje += "  - Error Max Bernstein vs Ref: " + objEst.dblErrorMaxBernsteinVsRef.ToString("E4") + "\n";
+                cadMensaje += "  - Error Max De Casteljau vs Ref: " + objEst.dblErrorMaxCasteljauVsRef.ToString("E4") + "\n";
+                cadMensaje += "  - Diferencia Max entre ambos: " + objEst.dblDiferenciaEntreAmbosMax.ToString("E4") + "\n";
+                cadMensaje += "  - Metodo mas estable: " + objEst.cadMetodoMasEstable + "\n\n";
+            }
+
+            MessageBox.Show(cadMensaje, "Estabilidad Numerica en Grados Altos", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        // Actualiza el resumen inferior con los resultados de estabilidad en grados 50 y 100
+        private void ActualizarEtiquetaEstabilidad(List<clsFilaEstabilidad> lstEst)
+        {
+            if (lstEst == null || lstEst.Count < 2)
+            {
+                return;
+            }
+
+            clsFilaEstabilidad objG50 = lstEst[0];
+            clsFilaEstabilidad objG100 = lstEst[1];
+            lblResumenEstabilidad.Text =
+                "Estabilidad vs Decimal -> Grado 50: ErrBernstein=" + objG50.dblErrorMaxBernsteinVsRef.ToString("E2") +
+                ", ErrCasteljau=" + objG50.dblErrorMaxCasteljauVsRef.ToString("E2") +
+                " (" + objG50.cadMetodoMasEstable + ") | Grado 100: ErrBernstein=" + objG100.dblErrorMaxBernsteinVsRef.ToString("E2") +
+                ", ErrCasteljau=" + objG100.dblErrorMaxCasteljauVsRef.ToString("E2") +
+                " (" + objG100.cadMetodoMasEstable + ")";
+        }
+
+        // Exporta la tabla de resultados y estabilidad a un archivo CSV
+        private void BtnExportarCsv_Click(object? objRemitente, EventArgs objArgumentos)
+        {
+            if (lstDatosActuales.Count == 0)
+            {
+                MessageBox.Show("Ejecute primero las pruebas antes de exportar a CSV.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (SaveFileDialog dlgGuardar = new SaveFileDialog())
+            {
+                dlgGuardar.Title = "Exportar resultados a CSV";
+                dlgGuardar.Filter = "Archivo CSV (*.csv)|*.csv";
+                dlgGuardar.FileName = "resultados_bezier.csv";
+
+                if (dlgGuardar.ShowDialog() == DialogResult.OK)
+                {
+                    objControladorPruebas.ExportarResultadosCsv(dlgGuardar.FileName);
+                    lblEstado.Text = "Estado: CSV exportado en " + dlgGuardar.FileName;
+                    MessageBox.Show("Resultados exportados correctamente a CSV.", "Exportacion exitosa", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+        }
+
+        // Guarda los dos graficos comparativos como archivos PNG para el informe en LaTeX
+        private void BtnGuardarPng_Click(object? objRemitente, EventArgs objArgumentos)
+        {
+            if (lstDatosActuales.Count == 0)
+            {
+                MessageBox.Show("Ejecute primero las pruebas antes de guardar los graficos PNG.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (FolderBrowserDialog dlgCarpeta = new FolderBrowserDialog())
+            {
+                dlgCarpeta.Description = "Seleccione la carpeta donde se guardaran los graficos PNG (ej. informe/figuras)";
+
+                if (dlgCarpeta.ShowDialog() == DialogResult.OK)
+                {
+                    string cadRutaMuestras = Path.Combine(dlgCarpeta.SelectedPath, "grafico_tiempo_vs_muestras.png");
+                    string cadRutaGrados = Path.Combine(dlgCarpeta.SelectedPath, "grafico_tiempo_vs_grado.png");
+
+                    GuardarGraficoComoPng(cadRutaMuestras, true);
+                    GuardarGraficoComoPng(cadRutaGrados, false);
+
+                    lblEstado.Text = "Estado: Graficos PNG guardados en " + dlgCarpeta.SelectedPath;
+                    MessageBox.Show(
+                        "Graficos guardados como PNG:\n- " + cadRutaMuestras + "\n- " + cadRutaGrados,
+                        "Imagenes guardadas",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+            }
+        }
+
+        // Renderiza el grafico directamente en un Bitmap de alta resolucion y lo guarda en PNG
+        private void GuardarGraficoComoPng(string cadRutaArchivo, bool bolEsGraficoMuestras)
+        {
+            int entAncho = 800;
+            int entAlto = 480;
+
+            using (Bitmap bmpImagen = new Bitmap(entAncho, entAlto))
+            using (Graphics objLienzo = Graphics.FromImage(bmpImagen))
+            {
+                Rectangle objArea = new Rectangle(0, 0, entAncho, entAlto);
+                if (bolEsGraficoMuestras)
+                {
+                    DibujarGraficoMuestras(objLienzo, objArea);
+                }
+                else
+                {
+                    DibujarGraficoGrados(objLienzo, objArea);
+                }
+
+                bmpImagen.Save(cadRutaArchivo, ImageFormat.Png);
+            }
         }
 
         // Llena el DataGridView y resalta en verde el metodo mas rapido de cada fila

@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Text;
 
 namespace BezierComparador
 {
@@ -17,87 +20,52 @@ namespace BezierComparador
         public double dblErrorCuadraticoMedio;
         public string cadMetodoMasRapido;
 
-        public int EntGrado
-        {
-            get { return entGrado; }
-            set { entGrado = value; }
-        }
-
-        public int EntMuestras
-        {
-            get { return entMuestras; }
-            set { entMuestras = value; }
-        }
-
-        public double DblTiempoBernsteinMs
-        {
-            get { return dblTiempoBernsteinMs; }
-            set { dblTiempoBernsteinMs = value; }
-        }
-
-        public double DblDesviacionBernsteinMs
-        {
-            get { return dblDesviacionBernsteinMs; }
-            set { dblDesviacionBernsteinMs = value; }
-        }
-
-        public double DblTiempoDeCasteljauMs
-        {
-            get { return dblTiempoDeCasteljauMs; }
-            set { dblTiempoDeCasteljauMs = value; }
-        }
-
-        public double DblDesviacionDeCasteljauMs
-        {
-            get { return dblDesviacionDeCasteljauMs; }
-            set { dblDesviacionDeCasteljauMs = value; }
-        }
-
-        public double DblErrorMaximo
-        {
-            get { return dblErrorMaximo; }
-            set { dblErrorMaximo = value; }
-        }
-
-        public double DblErrorPromedio
-        {
-            get { return dblErrorPromedio; }
-            set { dblErrorPromedio = value; }
-        }
-
-        public double DblErrorCuadraticoMedio
-        {
-            get { return dblErrorCuadraticoMedio; }
-            set { dblErrorCuadraticoMedio = value; }
-        }
-
-        public string CadMetodoMasRapido
-        {
-            get { return cadMetodoMasRapido; }
-            set { cadMetodoMasRapido = value; }
-        }
-
         public clsFilaPrueba()
         {
             cadMetodoMasRapido = "";
         }
     }
 
-    // Coordina los experimentos de rendimiento y precision entre Bernstein y De Casteljau
+    // Representa el resultado de estabilidad numerica en grados altos (50 y 100) vs referencia decimal
+    public class clsFilaEstabilidad
+    {
+        public int entGrado;
+        public int entMuestras;
+        public double dblErrorMaxBernsteinVsRef;
+        public double dblErrorPromBernsteinVsRef;
+        public double dblErrorMaxCasteljauVsRef;
+        public double dblErrorPromCasteljauVsRef;
+        public double dblDiferenciaEntreAmbosMax;
+        public string cadMetodoMasEstable;
+
+        public clsFilaEstabilidad()
+        {
+            cadMetodoMasEstable = "";
+        }
+    }
+
+    // Coordina los experimentos de rendimiento, estabilidad numerica y exportacion CSV
     public class clsControladorPruebas
     {
         private const int entSemillaFija = 12345;
         private int[] arrGradosPrueba;
         private int[] arrMuestrasPrueba;
+        private int[] arrGradosEstabilidad;
         private clsMedidor objMedidor;
         private clsComparador objComparador;
         private IEvaluadorCurva objEvaluadorBernstein;
         private IEvaluadorCurva objEvaluadorDeCasteljau;
         private List<clsFilaPrueba> lstResultados;
+        private List<clsFilaEstabilidad> lstEstabilidad;
 
         public List<clsFilaPrueba> LstResultados
         {
             get { return lstResultados; }
+        }
+
+        public List<clsFilaEstabilidad> LstEstabilidad
+        {
+            get { return lstEstabilidad; }
         }
 
         public int[] ArrGradosPrueba
@@ -114,11 +82,13 @@ namespace BezierComparador
         {
             arrGradosPrueba = new int[] { 2, 3, 5, 10, 20, 50 };
             arrMuestrasPrueba = new int[] { 100, 1000, 10000, 100000 };
+            arrGradosEstabilidad = new int[] { 50, 100 };
             objMedidor = new clsMedidor(10);
             objComparador = new clsComparador();
             objEvaluadorBernstein = new clsEvaluadorBernstein();
             objEvaluadorDeCasteljau = new clsEvaluadorDeCasteljau();
             lstResultados = new List<clsFilaPrueba>();
+            lstEstabilidad = new List<clsFilaEstabilidad>();
         }
 
         // Genera n + 1 puntos de control aleatorios reproducibles usando semilla fija
@@ -217,6 +187,136 @@ namespace BezierComparador
             }
 
             return lstResultados;
+        }
+
+        // Evalua la curva de referencia usando precision decimal de 128 bits para medir estabilidad
+        // Formula: P_i^(r) = (1 - t) * P_i^(r-1) + t * P_(i+1)^(r-1) en aritmetica decimal
+        private clsPuntoControl[] EvaluarReferenciaDecimal(List<clsPuntoControl> lstPuntos, int entMuestras)
+        {
+            int entCantidad = lstPuntos.Count;
+            int entGrado = entCantidad - 1;
+            clsPuntoControl[] arrReferencia = new clsPuntoControl[entMuestras];
+            decimal[] arrDecX = new decimal[entCantidad];
+            decimal[] arrDecY = new decimal[entCantidad];
+
+            for (int entK = 0; entK < entMuestras; entK++)
+            {
+                decimal decT = (decimal)entK / (decimal)(entMuestras - 1);
+                decimal decUnoMenosT = 1.0m - decT;
+
+                for (int entI = 0; entI < entCantidad; entI++)
+                {
+                    arrDecX[entI] = (decimal)lstPuntos[entI].dblX;
+                    arrDecY[entI] = (decimal)lstPuntos[entI].dblY;
+                }
+
+                for (int entR = 1; entR <= entGrado; entR++)
+                {
+                    int entLimite = entGrado - entR;
+                    for (int entI = 0; entI <= entLimite; entI++)
+                    {
+                        arrDecX[entI] = decUnoMenosT * arrDecX[entI] + decT * arrDecX[entI + 1];
+                        arrDecY[entI] = decUnoMenosT * arrDecY[entI] + decT * arrDecY[entI + 1];
+                    }
+                }
+
+                arrReferencia[entK] = new clsPuntoControl((double)arrDecX[0], (double)arrDecY[0]);
+            }
+
+            return arrReferencia;
+        }
+
+        // Prueba de estabilidad numerica en grados altos (50 y 100) contra referencia decimal
+        public List<clsFilaEstabilidad> EjecutarPruebaEstabilidad(int entMuestras)
+        {
+            if (entMuestras < 100)
+            {
+                entMuestras = 1000;
+            }
+
+            lstEstabilidad.Clear();
+
+            for (int entI = 0; entI < arrGradosEstabilidad.Length; entI++)
+            {
+                int entGrado = arrGradosEstabilidad[entI];
+                List<clsPuntoControl> lstPuntos = GenerarPuntosAleatorios(entGrado);
+
+                clsResultadoEvaluacion objBernstein = objEvaluadorBernstein.Evaluar(lstPuntos, entMuestras);
+                clsResultadoEvaluacion objCasteljau = objEvaluadorDeCasteljau.Evaluar(lstPuntos, entMuestras);
+                clsPuntoControl[] arrReferencia = EvaluarReferenciaDecimal(lstPuntos, entMuestras);
+
+                clsResultadoComparacion objCompBernsteinRef = objComparador.Comparar(objBernstein.arrPuntosCurva, arrReferencia);
+                clsResultadoComparacion objCompCasteljauRef = objComparador.Comparar(objCasteljau.arrPuntosCurva, arrReferencia);
+                clsResultadoComparacion objCompAmbos = objComparador.Comparar(objBernstein.arrPuntosCurva, objCasteljau.arrPuntosCurva);
+
+                clsFilaEstabilidad objFilaEst = new clsFilaEstabilidad();
+                objFilaEst.entGrado = entGrado;
+                objFilaEst.entMuestras = entMuestras;
+                objFilaEst.dblErrorMaxBernsteinVsRef = objCompBernsteinRef.dblDiferenciaMaxima;
+                objFilaEst.dblErrorPromBernsteinVsRef = objCompBernsteinRef.dblDiferenciaPromedio;
+                objFilaEst.dblErrorMaxCasteljauVsRef = objCompCasteljauRef.dblDiferenciaMaxima;
+                objFilaEst.dblErrorPromCasteljauVsRef = objCompCasteljauRef.dblDiferenciaPromedio;
+                objFilaEst.dblDiferenciaEntreAmbosMax = objCompAmbos.dblDiferenciaMaxima;
+
+                if (objFilaEst.dblErrorMaxCasteljauVsRef <= objFilaEst.dblErrorMaxBernsteinVsRef)
+                {
+                    objFilaEst.cadMetodoMasEstable = "De Casteljau";
+                }
+                else
+                {
+                    objFilaEst.cadMetodoMasEstable = "Bernstein";
+                }
+
+                lstEstabilidad.Add(objFilaEst);
+            }
+
+            return lstEstabilidad;
+        }
+
+        // Exporta las filas de resultados y de estabilidad numerica a un archivo CSV
+        public void ExportarResultadosCsv(string cadRutaArchivo)
+        {
+            StringBuilder objTexto = new StringBuilder();
+            CultureInfo objCultura = CultureInfo.InvariantCulture;
+
+            objTexto.AppendLine("Grado,Muestras,TiempoBernsteinMs,DesvBernsteinMs,TiempoDeCasteljauMs,DesvDeCasteljauMs,ErrorMaximo,ErrorPromedio,ECM,MasRapido");
+
+            for (int entI = 0; entI < lstResultados.Count; entI++)
+            {
+                clsFilaPrueba objFila = lstResultados[entI];
+                objTexto.Append(objFila.entGrado.ToString(objCultura)).Append(",");
+                objTexto.Append(objFila.entMuestras.ToString(objCultura)).Append(",");
+                objTexto.Append(objFila.dblTiempoBernsteinMs.ToString("F6", objCultura)).Append(",");
+                objTexto.Append(objFila.dblDesviacionBernsteinMs.ToString("F6", objCultura)).Append(",");
+                objTexto.Append(objFila.dblTiempoDeCasteljauMs.ToString("F6", objCultura)).Append(",");
+                objTexto.Append(objFila.dblDesviacionDeCasteljauMs.ToString("F6", objCultura)).Append(",");
+                objTexto.Append(objFila.dblErrorMaximo.ToString("E6", objCultura)).Append(",");
+                objTexto.Append(objFila.dblErrorPromedio.ToString("E6", objCultura)).Append(",");
+                objTexto.Append(objFila.dblErrorCuadraticoMedio.ToString("E6", objCultura)).Append(",");
+                objTexto.AppendLine(objFila.cadMetodoMasRapido);
+            }
+
+            if (lstEstabilidad.Count > 0)
+            {
+                objTexto.AppendLine();
+                objTexto.AppendLine("PRUEBA DE ESTABILIDAD NUMERICA (CONTRA REFERENCIA DECIMAL 128 BITS)");
+                objTexto.AppendLine("Grado,Muestras,ErrorMaxBernsteinVsDecimal,ErrorPromBernsteinVsDecimal,ErrorMaxCasteljauVsDecimal,ErrorPromCasteljauVsDecimal,DifMaxAmbos,MasEstable");
+
+                for (int entI = 0; entI < lstEstabilidad.Count; entI++)
+                {
+                    clsFilaEstabilidad objEst = lstEstabilidad[entI];
+                    objTexto.Append(objEst.entGrado.ToString(objCultura)).Append(",");
+                    objTexto.Append(objEst.entMuestras.ToString(objCultura)).Append(",");
+                    objTexto.Append(objEst.dblErrorMaxBernsteinVsRef.ToString("E6", objCultura)).Append(",");
+                    objTexto.Append(objEst.dblErrorPromBernsteinVsRef.ToString("E6", objCultura)).Append(",");
+                    objTexto.Append(objEst.dblErrorMaxCasteljauVsRef.ToString("E6", objCultura)).Append(",");
+                    objTexto.Append(objEst.dblErrorPromCasteljauVsRef.ToString("E6", objCultura)).Append(",");
+                    objTexto.Append(objEst.dblDiferenciaEntreAmbosMax.ToString("E6", objCultura)).Append(",");
+                    objTexto.AppendLine(objEst.cadMetodoMasEstable);
+                }
+            }
+
+            File.WriteAllText(cadRutaArchivo, objTexto.ToString(), Encoding.UTF8);
         }
     }
 }
