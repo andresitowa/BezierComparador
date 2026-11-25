@@ -1,0 +1,124 @@
+\section{Analisis Comparativo: Precision, Estabilidad y Complejidad}
+\label{sec:comparacion}
+
+Una vez cuantificados los tiempos de ejecucion en la Seccion~\ref{sec:experimentacion}, en esta seccion se analiza la equivalencia numerica entre ambos metodos en aritmetica de punto flotante de doble precision (\texttt{double}, estandar IEEE 754 de 64 bits \cite{ieee754}), su estabilidad frente a una referencia de alta precision en grados elevados ($n = 50$ y $n = 100$) y la correspondencia entre el desempeno empirico y la complejidad asintotica teorica desarrollada en la Seccion~\ref{sec:fundamentos}.
+
+\subsection{Diferencias Numericas entre Bernstein y De Casteljau}
+\label{subsec:comp_diferencias}
+
+Aunque la formulacion explicita con polinomios de Bernstein $B_{i,n}(t)$ de la Ecuacion~\ref{eq:bernstein} y la recurrencia baricentrica de De Casteljau de la Ecuacion~\ref{eq:casteljau} representan exactamente el mismo lugar geometrico en aritmetica real exacta \cite{farin2002,piegl1997}, su evaluacion en punto flotante realiza secuencias distintas de operaciones aritmeticas. Para cuantificar la discrepancia punto a punto entre la curva evaluada por Bernstein, $C^{(B)}(t_k) = (x_k^{(B)}, y_k^{(B)})$, y la obtenida por De Casteljau, $C^{(DC)}(t_k) = (x_k^{(DC)}, y_k^{(DC)})$, la clase \texttt{clsComparador} calcula en cada muestra $k \in \{0, \dots, N-1\}$ la distancia euclidiana $d_k$:
+
+\begin{equation}
+\label{eq:comp_distancia}
+d_k = \sqrt{\left(x_k^{(B)} - x_k^{(DC)}\right)^2 + \left(y_k^{(B)} - y_k^{(DC)}\right)^2}
+\end{equation}
+
+A partir del conjunto de distancias $\{d_0, d_1, \dots, d_{N-1}\}$, se reportan tres indicadores globales: el error maximo $E_{\max}$, el error promedio $E_{\text{prom}}$ y el error cuadratico medio ($\text{ECM}$):
+
+\begin{equation}
+\label{eq:comp_metricas}
+E_{\max} = \max_{0 \le k < N} d_k, \qquad E_{\text{prom}} = \frac{1}{N} \sum_{k=0}^{N-1} d_k, \qquad \text{ECM} = \frac{1}{N} \sum_{k=0}^{N-1} d_k^2
+\end{equation}
+
+En el Cuadro~\ref{tab:comp_diferencias} se resumen los valores medidos de $E_{\max}$, $E_{\text{prom}}$ y $\text{ECM}$ para todos los grados evaluados con $N = 1000$ y $N = 100000$ muestras.
+
+\begin{table}[H]
+\centering
+\caption{Diferencia numerica punto a punto entre la evaluacion de Bernstein y De Casteljau en doble precision (64 bits).}
+\label{tab:comp_diferencias}
+\begin{tabular}{rr ccc}
+\toprule
+\textbf{Grado $n$} & \textbf{Muestras $N$} & \textbf{Error Maximo $E_{\max}$} & \textbf{Error Promedio $E_{\text{prom}}$} & \textbf{Error Cuadratico Medio (ECM)} \\
+\midrule
+2  & 1000   & $1.6078 \times 10^{-13}$ & $4.2062 \times 10^{-14}$ & $3.0539 \times 10^{-27}$ \\
+2  & 100000 & $2.5421 \times 10^{-13}$ & $4.2744 \times 10^{-14}$ & $3.1393 \times 10^{-27}$ \\
+3  & 1000   & $2.5421 \times 10^{-13}$ & $5.4534 \times 10^{-14}$ & $5.2175 \times 10^{-27}$ \\
+3  & 100000 & $4.0990 \times 10^{-13}$ & $5.6840 \times 10^{-14}$ & $5.5505 \times 10^{-27}$ \\
+5  & 1000   & $4.5829 \times 10^{-13}$ & $6.4057 \times 10^{-14}$ & $6.8921 \times 10^{-27}$ \\
+5  & 100000 & $3.8132 \times 10^{-13}$ & $6.1000 \times 10^{-14}$ & $6.2005 \times 10^{-27}$ \\
+10 & 1000   & $3.5951 \times 10^{-13}$ & $6.8725 \times 10^{-14}$ & $7.1143 \times 10^{-27}$ \\
+10 & 100000 & $4.6874 \times 10^{-13}$ & $6.6771 \times 10^{-14}$ & $6.6023 \times 10^{-27}$ \\
+20 & 1000   & $4.5829 \times 10^{-13}$ & $1.0764 \times 10^{-13}$ & $1.7127 \times 10^{-26}$ \\
+20 & 100000 & $9.1657 \times 10^{-13}$ & $1.0633 \times 10^{-13}$ & $1.6683 \times 10^{-26}$ \\
+50 & 1000   & $5.2407 \times 10^{-13}$ & $1.3482 \times 10^{-13}$ & $2.4479 \times 10^{-26}$ \\
+50 & 100000 & $6.8449 \times 10^{-13}$ & $1.3392 \times 10^{-13}$ & $2.3781 \times 10^{-26}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Los resultados del Cuadro~\ref{tab:comp_diferencias} demuestran que, para coordenadas en el rango $[0, 800]$, la divergencia entre ambos metodos se mantiene en el orden de $10^{-14}$ a $10^{-13}$ unidades. Dado que el epsilon de maquina en doble precision es $\varepsilon_{\text{mach}} \approx 2.22 \times 10^{-16}$ y la magnitud de las coordenadas es del orden de $10^2$ a $10^3$, el error absoluto minimo representable en el ultimo bit significativo (\textit{ULP}) es aproximadamente $800 \times 2.22 \times 10^{-16} \approx 1.78 \times 10^{-13}$. En consecuencia, para grados $n \le 50$, ambos algoritmos coinciden hasta los ultimos $1$ a $5$ bits de la mantisa, lo cual es completamente imperceptible a nivel visual en un lienzo de pixeles enteros.
+
+\subsection{Prueba de Estabilidad Numerica en Grados Altos ($n = 50$ y $n = 100$)}
+\label{subsec:comp_estabilidad}
+
+Para evaluar la estabilidad numerica en condiciones extremas ($n = 50$ y $n = 100$), no basta con comparar ambos algoritmos en \texttt{double} entre si, sino que se requiere contrastarlos contra una solucion de referencia de mayor precision. En \texttt{clsControladorPruebas} se implemento un evaluador de referencia que ejecuta la interpolacion convexa de De Casteljau utilizando el tipo de dato \texttt{decimal} de 128 bits (28 a 29 digitos decimales significativos).
+
+Sea $C^{(\text{ref})}(t_k)$ el punto calculado en precision de 128 bits. Se midieron los errores absolutos de cada metodo en 64 bits frente a dicha referencia para $N = 1000$ y $N = 10000$ muestras. Los resultados obtenidos se presentan en el Cuadro~\ref{tab:comp_estabilidad} y su reporte visual en la aplicacion se ilustra en la Figura~\ref{fig:comp_estabilidad}.
+
+\begin{table}[H]
+\centering
+\caption{Prueba de estabilidad numerica en grados altos ($n = 50$ y $n = 100$) comparando las evaluaciones en \texttt{double} (64 bits) contra la referencia en \texttt{decimal} (128 bits).}
+\label{tab:comp_estabilidad}
+\footnotesize
+\begin{tabular}{rr cc cc c}
+\toprule
+& & \multicolumn{2}{c}{\textbf{Bernstein vs. Ref. Decimal}} & \multicolumn{2}{c}{\textbf{De Casteljau vs. Ref. Decimal}} & \\
+\cmidrule(lr){3-4} \cmidrule(lr){5-6}
+\textbf{Grado $n$} & \textbf{Muestras $N$} & \textbf{Error Max.} & \textbf{Error Prom.} & \textbf{Error Max.} & \textbf{Error Prom.} & \textbf{Dif. Max. Ambos} \\
+\midrule
+50  & 1000  & $1.7400 \times 10^{-12}$ & $4.5834 \times 10^{-13}$ & $1.6485 \times 10^{-12}$ & $4.5425 \times 10^{-13}$ & $5.2407 \times 10^{-13}$ \\
+50  & 10000 & $1.7658 \times 10^{-12}$ & $4.5664 \times 10^{-13}$ & $1.8128 \times 10^{-12}$ & $4.5531 \times 10^{-13}$ & $5.7969 \times 10^{-13}$ \\
+100 & 1000  & $3.9152 \times 10^{-12}$ & $8.2952 \times 10^{-13}$ & $4.0070 \times 10^{-12}$ & $8.3234 \times 10^{-13}$ & $6.8449 \times 10^{-13}$ \\
+100 & 10000 & $4.3751 \times 10^{-12}$ & $8.3040 \times 10^{-13}$ & $4.3913 \times 10^{-12}$ & $8.2933 \times 10^{-13}$ & $1.0619 \times 10^{-12}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\capturaPendiente{11cm}{5.5cm}{Cuadro de dialogo de la prueba de estabilidad numerica para grados n = 50 y n = 100 contra la referencia decimal de 128 bits.}{fig:comp_estabilidad}
+
+Del analisis del Cuadro~\ref{tab:comp_estabilidad} se desprenden tres hallazgos fundamentales sobre la estabilidad numerica:
+
+\begin{enumerate}
+    \item \textbf{Prevencion de desbordamiento (\textit{overflow}) en Bernstein:} Un calculo ingenuo del coeficiente binomial $\binom{n}{i} = \frac{n!}{i!(n-i)!}$ mediante factoriales enteros de 64 bits desborda a partir de $n = 21$, y en punto flotante pierde precision o satura para grados muy elevados. Sin embargo, al emplear la recurrencia multiplicativa iterativa $\binom{n}{i} = \binom{n}{i-1} \frac{n - i + 1}{i}$ en \texttt{double}, el coeficiente maximo para $n = 100$ es $\binom{100}{50} \approx 1.0089 \times 10^{29}$, valor que se encuentra muy por debajo del limite maximo de \texttt{double} ($\approx 1.7977 \times 10^{308}$).
+    \item \textbf{Estabilidad intrinseca de las combinaciones convexas:} Tanto la base de Bernstein (que satisface la particion de la unidad $\sum_{i=0}^n B_{i,n}(t) = 1$ con $B_{i,n}(t) \ge 0$ para $t \in [0,1]$) como cada paso de interpolacion $(1-t)P_i^{(r-1)} + t P_{i+1}^{(r-1)}$ de De Casteljau son combinaciones convexas libres de restas catastroficas \cite{farouki1987}. Por ello, en $n = 50$ y $n = 100$ ambos algoritmos presentan un error promedio frente a la referencia de 128 bits practicamente identico ($\approx 4.55 \times 10^{-13}$ en $n = 50$ y $\approx 8.30 \times 10^{-13}$ en $n = 100$).
+    \item \textbf{Acumulacion de redondeo segun el numero de operaciones:} En $n = 50$ ($N = 1000$), De Casteljau exhibe un error maximo ligeramente inferior ($1.6485 \times 10^{-12}$ frente a $1.7400 \times 10^{-12}$ de Bernstein). No obstante, al duplicar el grado a $n = 100$, De Casteljau debe ejecutar $\frac{n(n+1)}{2} = 5050$ interpolaciones encadenadas por muestra, mientras que Bernstein suma solo $n + 1 = 101$ terminos independientes, lo que provoca que ambos errores se equilibren alrededor de $4.38 \times 10^{-12}$.
+\end{enumerate}
+
+\subsection{Contraste entre Tiempos Medidos y Complejidad Teorica}
+\label{subsec:comp_complejidad}
+
+De acuerdo con el analisis matematico expuesto en la Seccion~\ref{sec:fundamentos}, cuando los coeficientes binomiales $\binom{n}{i}$ se precalculan una sola vez fuera del bucle de muestreo (con costo inicial $\mathcal{O}(n)$), la evaluacion de una curva de grado $n$ sobre $N$ muestras presenta las siguientes complejidades temporales:
+
+\begin{itemize}
+    \item \textbf{Evaluacion con polinomios de Bernstein:} $\mathcal{O}(n)$ por muestra, lo que equivale a un costo total $\mathcal{O}(N \cdot n)$.
+    \item \textbf{Algoritmo de De Casteljau:} $\frac{n(n+1)}{2} = \mathcal{O}(n^2)$ interpolaciones lineales por muestra, lo que arroja un costo total $\mathcal{O}(N \cdot n^2)$.
+\end{itemize}
+
+Al contrastar estas cotas asintoticas con los tiempos reales de los Cuadros~\ref{tab:exp_tiempos_bajos} y \ref{tab:exp_tiempos_altos}, se identifica un fenomeno computacional de gran relevancia practica: \textbf{el punto de cruce (\textit{crossover point}) determinado por las constantes ocultas de cada operacion}.
+
+\begin{table}[H]
+\centering
+\caption{Razon de velocidad empirica ($T_{\text{Casteljau}} / T_{\text{Bernstein}}$) para $N = 10000$ y $N = 100000$ muestras al variar el grado $n$.}
+\label{tab:comp_speedup}
+\begin{tabular}{r rrr l}
+\toprule
+\textbf{Grado $n$} & \textbf{Operaciones Casteljau $\frac{n(n+1)}{2}$} & \textbf{Razon ($N=1000$)} & \textbf{Razon ($N=10000$)} & \textbf{Metodo Mas Rapido} \\
+\midrule
+2  & 3    & $0.68\times$ & $0.57\times$ & De Casteljau \\
+3  & 6    & $0.58\times$ & $0.39\times$ & De Casteljau \\
+5  & 15   & $0.61\times$ & $0.72\times$ & De Casteljau \\
+10 & 55   & $1.04\times$ & $1.29\times$ & Bernstein (punto de cruce) \\
+20 & 210  & $1.76\times$ & $1.88\times$ & Bernstein \\
+50 & 1275 & $3.17\times$ & $4.83\times$ & Bernstein \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Como se evidencia en el Cuadro~\ref{tab:comp_speedup}, el comportamiento empirico se divide en dos regimenes claramente diferenciados:
+
+\begin{enumerate}
+    \item \textbf{Regimen de grado bajo ($n \in \{2, 3, 5\}$):} Aunque Bernstein es asintoticamente $\mathcal{O}(n)$, en cada iteracion del bucle interno invoca dos llamadas a la funcion trascendente \texttt{Math.Pow} para evaluar $(1-t)^{n-i}$ y $t^i$. Cada llamada a \texttt{Math.Pow} conlleva un costo de varias decenas de ciclos de reloj de CPU. Por el contrario, De Casteljau para $n = 3$ realiza unicamente $\frac{3 \times 4}{2} = 6$ combinaciones lineales compuestas por multiplicaciones y sumas elementales de punto flotante sobre arreglos contiguos en cache L1. Debido a esta diferencia en la constante multiplicativa por operacion, \textbf{De Casteljau resulta entre un $28\%$ y un $61\%$ mas rapido que Bernstein para $n \le 5$}.
+    \item \textbf{Punto de cruce ($n \approx 10$) y regimen de grado alto ($n \in \{20, 50\}$):} En $n = 10$, las $55$ interpolaciones por muestra de De Casteljau igualan y comienzan a superar el costo de las $11$ evaluaciones de potencia de Bernstein (en $N = 10000$, Bernstein tarda $2.3146\text{ ms}$ frente a $2.9957\text{ ms}$ de De Casteljau). Al escalar de $n = 10$ a $n = 50$ (un incremento de $5\times$ en el grado), el tiempo de Bernstein para $N = 10000$ crece de $2.3146\text{ ms}$ a $11.8827\text{ ms}$ (un factor de $5.13\times$, confirmando fielmente su complejidad lineal $\mathcal{O}(n)$), mientras que el tiempo de De Casteljau se dispara de $2.9957\text{ ms}$ a $57.4047\text{ ms}$ (un factor de $19.16\times$, consistente con su crecimiento cuadratico $\mathcal{O}(n^2)$). En consecuencia, para $n = 50$, \textbf{Bernstein supera en velocidad a De Casteljau por un factor de hasta $4.83\times$}.
+\end{enumerate}
+
+% RESUMEN: Esta seccion (06_comparacion.tex) analiza las diferencias numericas reales punto a punto (Cuadro tab:comp_diferencias), la prueba de estabilidad en grados 50 y 100 contra referencia decimal de 128 bits (Cuadro tab:comp_estabilidad y Figura fig:comp_estabilidad) y el contraste entre tiempos medidos y complejidad teorica (Cuadro tab:comp_speedup). Referencia las etiquetas de la Seccion 2 (\ref{sec:fundamentos}, \ref{eq:bernstein}, \ref{eq:casteljau}) y citas \cite{ieee754,farin2002,piegl1997,farouki1987}. El equipo debe verificar que en 02_fundamentos.tex existan las etiquetas sec:fundamentos, eq:bernstein y eq:casteljau, y agregar las claves bibliograficas a referencias.bib.

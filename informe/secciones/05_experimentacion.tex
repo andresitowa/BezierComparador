@@ -1,0 +1,150 @@
+\section{Experimentacion y Medicion de Rendimiento}
+\label{sec:experimentacion}
+
+En esta seccion se describe el protocolo experimental empleado para cuantificar el rendimiento computacional de la evaluacion directa mediante polinomios de Bernstein frente al algoritmo recursivo-iterativo de De Casteljau. Todas las mediciones provienen de la ejecucion real del modulo de pruebas implementado en la aplicacion.
+
+\subsection{Metodologia Experimental}
+\label{subsec:exp_metodologia}
+
+El diseno experimental evalua el comportamiento de ambos algoritmos al variar dos factores independientes: el grado del polinomio $n \in \{2, 3, 5, 10, 20, 50\}$ (donde la curva posee $n + 1$ puntos de control $P_0, P_1, \dots, P_n$) y el numero de muestras discretas $N \in \{100, 1000, 10000, 100000\}$ distribuidas uniformemente en el intervalo $t \in [0, 1]$ segun la relacion $t_k = k / (N - 1)$ para $k = 0, 1, \dots, N - 1$.
+
+Para garantizar la reproducibilidad exacta entre corridas y entre ambos metodos, los puntos de control $P_i$ se generan de forma pseudoaleatoria dentro de un dominio de $800 \times 600$ unidades utilizando una semilla fija determinista ($12345 + n$). De este modo, tanto el evaluador de Bernstein como el de De Casteljau procesan exactamente la misma geometria en cada combinacion $(n, N)$.
+
+El aislamiento del tiempo de calculo matematico se implemento en la clase \texttt{clsMedidor} utilizando el temporizador de alta resolucion \texttt{Stopwatch} del espacio de nombres \texttt{System.Diagnostics}. El protocolo de medicion aplica tres reglas estrictas:
+
+\begin{enumerate}
+    \item \textbf{Exclusion del renderizado grafico:} El cronometro mide exclusivamente el ciclo matematico que calcula el arreglo de puntos de la curva. Ninguna operacion de dibujo en pantalla (\texttt{Graphics.DrawLine}) ni actualizacion de controles visuales interviene durante la medicion.
+    \item \textbf{Ejecucion de calentamiento (\textit{warm-up}):} Antes de iniciar el registro de tiempos de cada caso, se realiza una evaluacion completa cuyos tiempos se descartan. Este paso elimina el sesgo introducido por la compilacion \textit{Just-In-Time} (JIT) de .NET y estabiliza la memoria cache del procesador.
+    \item \textbf{Repeticiones estadisticas:} Cada combinacion $(n, N)$ se ejecuta un minimo de $M = 10$ repeticiones consecutivas independientes. A partir de las $M$ mediciones $T_1, T_2, \dots, T_M$, se calculan el tiempo promedio $\bar{T}$, el valor minimo $T_{\min}$, el valor maximo $T_{\max}$ y la desviacion estandar poblacional $\sigma_T$:
+\end{enumerate}
+
+\begin{equation}
+\label{eq:exp_estadisticas}
+\bar{T} = \frac{1}{M} \sum_{j=1}^{M} T_j, \qquad \sigma_T = \sqrt{\frac{1}{M} \sum_{j=1}^{M} \left(T_j - \bar{T}\right)^2}
+\end{equation}
+
+En el Listado~\ref{lst:exp_medidor} se presenta el fragmento central del metodo \texttt{Medir} encargado de aplicar el calentamiento y capturar los tiempos con \texttt{Stopwatch}.
+
+\begin{lstlisting}[caption={Ciclo de calentamiento y medicion con Stopwatch en clsMedidor.},label={lst:exp_medidor}]
+// Ejecucion de calentamiento descartada para estabilizar cache y JIT
+clsResultadoEvaluacion objCalentamiento = objEvaluador.Evaluar(lstPuntos, entMuestras);
+double[] arrTiemposMs = new double[entCantidadRepeticiones];
+double dblSumaTiempos = 0.0;
+Stopwatch objReloj = new Stopwatch();
+
+for (int entI = 0; entI < entCantidadRepeticiones; entI++)
+{
+    objReloj.Restart();
+    clsResultadoEvaluacion objIteracion = objEvaluador.Evaluar(lstPuntos, entMuestras);
+    objReloj.Stop();
+
+    double dblTiempoActual = objReloj.Elapsed.TotalMilliseconds;
+    arrTiemposMs[entI] = dblTiempoActual;
+    dblSumaTiempos += dblTiempoActual;
+}
+\end{lstlisting}
+
+\subsection{Entorno de Pruebas}
+\label{subsec:exp_entorno}
+
+Las pruebas de rendimiento y estabilidad se ejecutaron bajo condiciones controladas en el equipo cuyas especificaciones tecnicas se detallan en el Cuadro~\ref{tab:exp_hardware}.
+
+\begin{table}[H]
+\centering
+\caption{Especificaciones del equipo y entorno de ejecucion utilizado en la experimentacion.}
+\label{tab:exp_hardware}
+\begin{tabular}{ll}
+\toprule
+\textbf{Componente / Parametro} & \textbf{Especificacion} \\
+\midrule
+Procesador (CPU) & 13th Gen Intel Core i7-13650HX \\
+Memoria RAM & 23.7 GB DDR5 \\
+Sistema Operativo & Microsoft Windows 11 Home (64 bits) \\
+Plataforma y Runtime & .NET 8.0 (\texttt{net8.0-windows}, Windows Forms) \\
+Temporizador & \texttt{System.Diagnostics.Stopwatch} (alta resolucion) \\
+Repeticiones por caso ($M$) & 10 corridas (+ 1 corrida previa de calentamiento) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+En la Figura~\ref{fig:exp_ventana} se muestra la interfaz del laboratorio de pruebas (\texttt{frmPruebas}) tras completar la bateria automatizada de 24 combinaciones $(n, N)$.
+
+\capturaPendiente{14cm}{6.5cm}{Ventana de experimentacion (frmPruebas) con la tabla de resultados y el resaltado en verde del metodo mas rapido por fila.}{fig:exp_ventana}
+
+\subsection{Resultados de Tiempo de Ejecucion}
+\label{subsec:exp_resultados_tiempos}
+
+En el Cuadro~\ref{tab:exp_tiempos_bajos} se reportan las metricas de tiempo (promedio, minimo, maximo y desviacion estandar, expresadas en milisegundos con cuatro decimales) obtenidas para los grados bajos e intermedios $n \in \{2, 3, 5\}$. Por su parte, en el Cuadro~\ref{tab:exp_tiempos_altos} se presentan los resultados correspondientes a los grados medios y altos $n \in \{10, 20, 50\}$.
+
+\begin{table}[H]
+\centering
+\caption{Tiempos de ejecucion medidos (en ms) para curvas de Bezier de grados $n \in \{2, 3, 5\}$ con $M = 10$ repeticiones.}
+\label{tab:exp_tiempos_bajos}
+\footnotesize
+\begin{tabular}{rr rrrr rrrr}
+\toprule
+& & \multicolumn{4}{c}{\textbf{Polinomios de Bernstein (ms)}} & \multicolumn{4}{c}{\textbf{Algoritmo de De Casteljau (ms)}} \\
+\cmidrule(lr){3-6} \cmidrule(lr){7-10}
+\textbf{Grado $n$} & \textbf{Muestras $N$} & \textbf{Prom.} & \textbf{Min.} & \textbf{Max.} & \textbf{Desv.} & \textbf{Prom.} & \textbf{Min.} & \textbf{Max.} & \textbf{Desv.} \\
+\midrule
+2 & 100    & 0.0150 & 0.0100 & 0.0206 & 0.0033 & 0.0107 & 0.0057 & 0.0278 & 0.0062 \\
+2 & 1000   & 0.1244 & 0.1162 & 0.1395 & 0.0082 & 0.0840 & 0.0634 & 0.1721 & 0.0301 \\
+2 & 10000  & 1.5824 & 1.1915 & 3.8914 & 0.7849 & 0.9002 & 0.7312 & 1.9031 & 0.3512 \\
+2 & 100000 & 15.3347 & 9.7761 & 30.1090 & 7.5617 & 12.5035 & 4.9829 & 27.8083 & 8.5215 \\
+\midrule
+3 & 100    & 0.0136 & 0.0129 & 0.0146 & 0.0006 & 0.0081 & 0.0077 & 0.0088 & 0.0003 \\
+3 & 1000   & 0.1315 & 0.1298 & 0.1390 & 0.0025 & 0.0761 & 0.0752 & 0.0776 & 0.0007 \\
+3 & 10000  & 2.5362 & 1.3045 & 13.4812 & 3.6484 & 0.9916 & 0.9156 & 1.0788 & 0.0528 \\
+3 & 100000 & 22.0678 & 13.4048 & 36.1532 & 8.2307 & 14.0073 & 7.6763 & 25.1752 & 7.3476 \\
+\midrule
+5 & 100    & 0.0223 & 0.0211 & 0.0288 & 0.0022 & 0.0150 & 0.0144 & 0.0156 & 0.0004 \\
+5 & 1000   & 0.2165 & 0.2135 & 0.2303 & 0.0049 & 0.1321 & 0.1310 & 0.1382 & 0.0020 \\
+5 & 10000  & 2.1733 & 2.1406 & 2.2243 & 0.0310 & 1.5645 & 1.4501 & 1.6780 & 0.0641 \\
+5 & 100000 & 15.5748 & 11.7051 & 33.9384 & 6.5923 & 13.2382 & 8.0237 & 39.0250 & 9.4439 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Tiempos de ejecucion medidos (en ms) para curvas de Bezier de grados $n \in \{10, 20, 50\}$ con $M = 10$ repeticiones.}
+\label{tab:exp_tiempos_altos}
+\footnotesize
+\begin{tabular}{rr rrrr rrrr}
+\toprule
+& & \multicolumn{4}{c}{\textbf{Polinomios de Bernstein (ms)}} & \multicolumn{4}{c}{\textbf{Algoritmo de De Casteljau (ms)}} \\
+\cmidrule(lr){3-6} \cmidrule(lr){7-10}
+\textbf{Grado $n$} & \textbf{Muestras $N$} & \textbf{Prom.} & \textbf{Min.} & \textbf{Max.} & \textbf{Desv.} & \textbf{Prom.} & \textbf{Min.} & \textbf{Max.} & \textbf{Desv.} \\
+\midrule
+10 & 100    & 0.0231 & 0.0227 & 0.0237 & 0.0003 & 0.0250 & 0.0229 & 0.0333 & 0.0029 \\
+10 & 1000   & 0.2316 & 0.2305 & 0.2352 & 0.0013 & 0.2412 & 0.2302 & 0.2510 & 0.0070 \\
+10 & 10000  & 2.3146 & 2.2504 & 2.3789 & 0.0452 & 2.9957 & 2.2742 & 8.8516 & 1.9522 \\
+10 & 100000 & 26.8355 & 22.7167 & 34.9175 & 3.6283 & 27.3325 & 22.3623 & 37.3779 & 4.6985 \\
+\midrule
+20 & 100    & 0.0458 & 0.0451 & 0.0468 & 0.0005 & 0.0781 & 0.0744 & 0.0858 & 0.0029 \\
+20 & 1000   & 0.4452 & 0.4223 & 0.4798 & 0.0168 & 0.7852 & 0.7503 & 0.9160 & 0.0458 \\
+20 & 10000  & 4.7484 & 4.3280 & 8.2360 & 1.1628 & 8.9083 & 8.1068 & 9.7735 & 0.5646 \\
+20 & 100000 & 49.1064 & 43.5127 & 62.8725 & 5.3944 & 127.6388 & 80.7287 & 323.3119 & 75.2158 \\
+\midrule
+50 & 100    & 0.1326 & 0.1295 & 0.1383 & 0.0025 & 0.5504 & 0.4808 & 0.9500 & 0.1358 \\
+50 & 1000   & 1.2804 & 1.2020 & 1.3413 & 0.0433 & 4.0619 & 3.9121 & 4.2681 & 0.0910 \\
+50 & 10000  & 11.8827 & 10.4963 & 13.9232 & 0.9945 & 57.4047 & 44.2045 & 82.9186 & 15.8928 \\
+50 & 100000 & 227.3219 & 219.0755 & 246.7054 & 8.5025 & 856.0143 & 795.7440 & 1170.4073 & 106.1623 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Graficos Comparativos de Rendimiento}
+\label{subsec:exp_graficos}
+
+A partir de los registros experimentales de los Cuadros~\ref{tab:exp_tiempos_bajos} y \ref{tab:exp_tiempos_altos}, el modulo de visualizacion de la aplicacion construye dos graficos comparativos trazados exclusivamente mediante segmentos de recta (\texttt{DrawLine}).
+
+En la Figura~\ref{fig:exp_tiempo_muestras} se presenta la evolucion del tiempo promedio de ejecucion en funcion del numero de muestras $N$ para un grado elevado fijo ($n = 50$). Se observa una dependencia lineal respecto a $N$ en ambos algoritmos, pero con una pendiente significativamente mayor en el algoritmo de De Casteljau.
+
+\capturaPendiente{13cm}{6cm}{Grafico comparativo de Tiempo promedio (ms) vs Numero de muestras N para grado n = 50 (azul: Bernstein, naranja: De Casteljau).}{fig:exp_tiempo_muestras}
+
+De manera complementaria, en la Figura~\ref{fig:exp_tiempo_grado} se ilustra el crecimiento del tiempo de ejecucion al incrementar el grado $n$ desde $2$ hasta $50$ manteniendo fijo el numero de muestras en $N = 100000$. Este grafico permite apreciar visualmente la divergencia entre el crecimiento lineal respecto a $n$ de la evaluacion de Bernstein con coeficientes precalculados y el crecimiento cuadratico del esquema triangular de De Casteljau.
+
+\capturaPendiente{13cm}{6cm}{Grafico comparativo de Tiempo promedio (ms) vs Grado n para N = 100000 muestras (azul: Bernstein, naranja: De Casteljau).}{fig:exp_tiempo_grado}
+
+% RESUMEN: Esta seccion (05_experimentacion.tex) contiene la metodologia experimental (Stopwatch, calentamiento, 10 repeticiones, exclusion de dibujo), la tabla de hardware real (Intel Core i7-13650HX, 23.7 GB RAM, .NET 8.0), las tablas completas de tiempos reales (Cuadros tab:exp_tiempos_bajos y tab:exp_tiempos_altos) con 4 decimales, y los espacios de captura fig:exp_ventana, fig:exp_tiempo_muestras y fig:exp_tiempo_grado. El equipo debe verificar que las imagenes exportadas en figuras/ coincidan con los nombres exp_ventana_pruebas.png, exp_tiempo_vs_muestras.png y exp_tiempo_vs_grado.png al reemplazar \capturaPendiente.

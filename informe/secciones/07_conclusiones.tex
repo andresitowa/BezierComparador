@@ -1,0 +1,52 @@
+\section{Conclusiones y Recomendaciones}
+\label{sec:conclusiones}
+
+A partir del desarrollo teorico presentado en la Seccion~\ref{sec:fundamentos}, la implementacion bajo arquitectura MVC descrita en la Seccion~\ref{sec:implementacion} y la evidencia experimental analizada en las Secciones~\ref{sec:experimentacion} y \ref{sec:comparacion}, se formulan las conclusiones generales del estudio comparativo.
+
+\subsection{Sintesis sobre Eficiencia y Estabilidad Numerica}
+\label{subsec:conc_respuesta}
+
+En respuesta directa a la interrogante central de esta investigacion ---\textit{que metodo resulta mas eficiente y estable numericamente bajo diferentes condiciones de ejecucion}---, los resultados experimentales permiten concluir lo siguiente:
+
+\begin{enumerate}
+    \item \textbf{Respecto a la eficiencia computacional:} Ninguno de los dos metodos domina de forma absoluta en todo el espectro de grados; existe un umbral de transicion en torno a $n \approx 10$. Para curvas de \textbf{grado bajo ($n \le 5$)}, el algoritmo de \textbf{De Casteljau es el mas eficiente}, alcanzando tiempos hasta un $61\%$ menores que la evaluacion directa de Bernstein (por ejemplo, $0.9916\text{ ms}$ frente a $2.5362\text{ ms}$ en $n = 3$ y $N = 10000$), gracias a que opera unicamente con sumas y multiplicaciones elementales sin invocar funciones de exponenciacion (\texttt{Math.Pow}). Por el contrario, para \textbf{grados medios y altos ($n \ge 10$)}, la evaluacion mediante \textbf{polinomios de Bernstein con coeficientes binomiales precalculados es substancialmente mas eficiente} debido a su complejidad lineal $\mathcal{O}(N \cdot n)$ frente al costo cuadratico $\mathcal{O}(N \cdot n^2)$ de De Casteljau, llegando a ser entre $3.17\times$ y $4.83\times$ mas rapida en $n = 50$.
+    \item \textbf{Respecto a la estabilidad numerica:} En el dominio evaluado $t \in [0, 1]$ y utilizando el calculo iterativo libre de factoriales para los coeficientes binomiales $\binom{n}{i}$, \textbf{ambos algoritmos exhiben una estabilidad numerica excelente y equivalente} en doble precision (64 bits) para grados de hasta $n = 100$. La discrepancia entre ambos metodos se mantiene entre $10^{-14}$ y $10^{-13}$ unidades para $n \le 50$, y el error maximo frente a una referencia en precision \texttt{decimal} de 128 bits en $n = 100$ es de apenas $4.38 \times 10^{-12}$ unidades para Bernstein y $4.39 \times 10^{-12}$ unidades para De Casteljau. Esta robustez obedece a que ambos esquemas evaluan combinaciones convexas no negativas dentro del intervalo $[0, 1]$, evitando el fenomeno de cancelacion sustractiva.
+\end{enumerate}
+
+\subsection{Recomendaciones segun el Escenario de Aplicacion}
+\label{subsec:conc_recomendaciones}
+
+Con base en el comportamiento medido, en el Cuadro~\ref{tab:conc_guia} se establece una guia de seleccion practica para determinar que algoritmo emplear segun los requerimientos del sistema grafico o de diseno asistido por computadora (CAD).
+
+\begin{table}[H]
+\centering
+\caption{Matriz de recomendacion del metodo de evaluacion segun el escenario de uso.}
+\label{tab:conc_guia}
+\small
+\begin{tabular}{p{4.2cm} p{3.2cm} p{6.8cm}}
+\toprule
+\textbf{Escenario de Ejecucion} & \textbf{Metodo Recomendado} & \textbf{Justificacion Tecnica y Experimental} \\
+\midrule
+Curvas con pocos puntos de control ($n \in \{2, 3, 4, 5\}$, tipicas en fuentes tipograficas y trazos vectoriales 2D) & Algoritmo de De Casteljau & Menor constante por operacion al evitar \texttt{Math.Pow}; reduce el tiempo de calculo entre un $28\%$ y un $61\%$ respecto a Bernstein. \\
+\midrule
+Curvas de grado elevado ($n \ge 10$) con alta densidad de muestreo ($N \ge 10000$) & Polinomios de Bernstein & El precalculo de $\binom{n}{i}$ fuera del bucle garantiza complejidad $\mathcal{O}(N \cdot n)$, evitando la penalizacion cuadratica $\mathcal{O}(N \cdot n^2)$ de De Casteljau. \\
+\midrule
+Visualizacion didactica de niveles de interpolacion o subdivision geometrica de curvas & Algoritmo de De Casteljau & Proporciona directamente los poligonos intermedios $P_i^{(r)}(t)$ y divide la curva en dos subcurvas de Bezier en un parametro $t$ dado. \\
+\midrule
+Grados extremos ($n > 1000$) donde $\binom{n}{n/2}$ supere el limite de \texttt{double} ($10^{308}$) & Algoritmo de De Casteljau & Sus factores $(1-t)$ y $t$ permanecen acotados en $[0,1]$ sin importar el grado $n$, mientras que $\binom{n}{i}$ desborda \texttt{double} a partir de $n \approx 1030$. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Limitaciones y Trabajo Futuro}
+\label{subsec:conc_futuro}
+
+El estudio realizado presenta alcances bien definidos que abren lineas de mejora para desarrollos posteriores:
+
+\begin{itemize}
+    \item \textbf{Optimizacion de potencias en Bernstein mediante esquema de Horner:} En la implementacion actual se evaluo la formula canonica de Bernstein utilizando \texttt{Math.Pow} para mantener total fidelidad pedagogica con la Ecuacion~\ref{eq:bernstein}. Como trabajo futuro, la evaluacion de Bernstein puede reformularse mediante un esquema tipo Horner o acumulacion multiplicativa de potencias de $t$ y $(1-t)$, eliminando por completo las llamadas a \texttt{Math.Pow} y reduciendo aun mas la constante oculta del tiempo $\mathcal{O}(n)$ incluso en grados bajos.
+    \item \textbf{Paralelizacion y ejecucion en GPU:} Dado que cada muestra $t_k$ es independiente de las demas, tanto el bucle externo de Bernstein como el de De Casteljau son altamente paralelizables mediante \texttt{Parallel.For} en CPU multinucleo o \textit{shaders} de computo en GPU.
+    \item \textbf{Extension a curvas B-Spline y NURBS:} Para curvas complejas en sistemas industriales, en lugar de elevar el grado $n$ de una unica curva de Bezier por encima de $n = 20$, resulta recomendable extender el comparador hacia curvas B-Spline por tramos de grado cubico ($n = 3$) con continuidad $C^2$, combinando la localidad de control con la alta velocidad demostrada en grados bajos.
+\end{itemize}
+
+% RESUMEN: Esta seccion (07_conclusiones.tex) responde directamente a la pregunta de investigacion sobre eficiencia y estabilidad numerica con base en los datos reales, incluye una tabla de recomendaciones por escenario (Cuadro tab:conc_guia: pocos puntos, grado alto, muchas muestras, visualizacion de interpolaciones y grados extremos) y detalla limitaciones y trabajo futuro. Referencia \ref{sec:fundamentos}, \ref{sec:implementacion}, \ref{sec:experimentacion}, \ref{sec:comparacion} y \ref{eq:bernstein}. El equipo debe verificar que en 04_implementacion.tex exista la etiqueta \label{sec:implementacion}.
