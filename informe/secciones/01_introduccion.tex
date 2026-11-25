@@ -1,0 +1,48 @@
+\section{Introduccion}
+\label{sec:introduccion}
+
+La computacion grafica moderna se fundamenta en la representacion matematica precisa de curvas y superficies para el modelado geometrico, la animacion y el diseno asistido por computadora (CAD). Entre las herramientas matematicas mas utilizadas en este ambito se encuentran las \textbf{curvas de Bezier}, definidas como combinaciones afines de puntos de control ponderados por los polinomios base de Bernstein. Desde su formalizacion por Pierre Bezier en la decada de 1960 para el diseno de carrocerias en la industria automotriz \cite{farin2002}, estas curvas se han convertido en un pilar de los graficos por computadora, los formatos tipograficos (TrueType, OpenType) y los editores de graficos vectoriales.
+
+Evaluar una curva de Bezier de grado $n$ definida por $n + 1$ puntos de control $P_0, P_1, \dots, P_n$ consiste en calcular el punto $C(t)$ para cada valor del parametro $t \in [0, 1]$ mediante alguno de dos metodos clasicos: la \textbf{evaluacion directa con polinomios de Bernstein}, que computa explicitamente la combinacion lineal $C(t) = \sum_{i=0}^{n} B_{i,n}(t) \, P_i$, y el \textbf{algoritmo de De Casteljau}, que obtiene el mismo punto mediante interpolaciones lineales sucesivas sin requerir el calculo de coeficientes binomiales ni potencias. Ambos metodos producen, en aritmetica real exacta, resultados identicos; sin embargo, difieren significativamente en complejidad computacional, constantes de tiempo por operacion y comportamiento numerico en aritmetica de punto flotante finita.
+
+A pesar de que la literatura establece claramente las complejidades asintoticas de cada metodo ---$\mathcal{O}(n)$ por muestra para Bernstein con coeficientes precalculados y $\mathcal{O}(n^2)$ para De Casteljau---, la eleccion practica del algoritmo optimo depende de factores empiricos que no pueden deducirse exclusivamente del analisis teorico: la constante multiplicativa oculta de cada operacion, la jerarquia de cache del procesador, el costo de las funciones de exponenciacion (\texttt{Math.Pow}) frente a las sumas y multiplicaciones elementales, y el umbral de grado en el que un metodo supera al otro. \textbf{Cuantificar experimentalmente este punto de cruce y analizar la estabilidad numerica de ambos algoritmos en condiciones controladas constituye la motivacion central del presente trabajo.}
+
+\subsection{Objetivo General}
+\label{subsec:intro_objetivo_general}
+
+Disenar, implementar y validar una aplicacion de escritorio en C\# con Windows Forms que permita comparar cuantitativamente la eficiencia computacional y la estabilidad numerica de la evaluacion de curvas de Bezier mediante polinomios de Bernstein frente al algoritmo de De Casteljau, bajo diferentes grados de curva y densidades de muestreo.
+
+\subsection{Objetivos Especificos}
+\label{subsec:intro_objetivos_especificos}
+
+\begin{enumerate}
+    \item Desarrollar una interfaz grafica interactiva que permita al usuario definir, manipular y visualizar curvas de Bezier de grado arbitrario, dibujando la curva exclusivamente mediante segmentos de recta (\texttt{DrawLine}) sin recurrir a funciones graficas predefinidas que generen curvas automaticamente.
+    \item Implementar de forma independiente ambos algoritmos de evaluacion ---polinomios de Bernstein con coeficientes binomiales precalculados y algoritmo iterativo de De Casteljau--- bajo una arquitectura orientada a objetos con patron Modelo--Vista--Controlador (MVC), garantizando que compartan la misma interfaz (\texttt{IEvaluadorCurva}) y los mismos datos de entrada.
+    \item Disenar un protocolo de medicion de rendimiento que aisle exclusivamente el tiempo del calculo matematico, empleando el temporizador de alta resolucion \texttt{System.Diagnostics.Stopwatch}, ejecucion de calentamiento previo (descarte de la primera corrida por compilacion JIT) y un minimo de $M = 10$ repeticiones independientes por cada combinacion de grado $n$ y numero de muestras $N$.
+    \item Evaluar la estabilidad numerica de ambos metodos en grados elevados ($n = 50$ y $n = 100$) comparando sus resultados en doble precision (\texttt{double}, 64 bits) contra una referencia calculada en precision \texttt{decimal} de 128 bits.
+    \item Contrastar los tiempos de ejecucion medidos con las complejidades asintoticas teoricas, identificando el punto de cruce (\textit{crossover point}) a partir del cual un metodo supera al otro y cuantificando la razon de velocidad (\textit{speedup}) en cada regimen de grado.
+\end{enumerate}
+
+\subsection{Alcance del Proyecto}
+\label{subsec:intro_alcance}
+
+El presente proyecto abarca el desarrollo completo de la aplicacion \textit{BezierComparador}, desde el diseno arquitectonico hasta la experimentacion y el analisis de resultados. El sistema soporta curvas de Bezier bidimensionales de grado arbitrario (desde cuadraticas con $n = 2$ hasta grado $n = 50$ en las pruebas de rendimiento y $n = 100$ en las pruebas de estabilidad). La aplicacion consta de dos ventanas principales: una ventana interactiva para la visualizacion y manipulacion de curvas, y una ventana de laboratorio de pruebas (\texttt{frmPruebas}) que ejecuta automaticamente la bateria de $6 \times 4 = 24$ combinaciones $(n, N)$ con $n \in \{2, 3, 5, 10, 20, 50\}$ y $N \in \{100, 1000, 10000, 100000\}$.
+
+\subsection{Restriccion Fundamental: Prohibicion de Funciones Graficas de Curvas}
+\label{subsec:intro_restriccion}
+
+Una restriccion esencial del proyecto establece que \textbf{no se permite el uso de ninguna funcion predefinida del framework grafico que genere curvas automaticamente} (tales como \texttt{Graphics.DrawBezier}, \texttt{Graphics.DrawCurve}, \texttt{GraphicsPath.AddBezier} u operaciones equivalentes). Toda representacion visual de las curvas de Bezier se construye mediante el trazado punto a punto de segmentos de recta con \texttt{Graphics.DrawLine}, conectando consecutivamente los puntos $(C(t_k), C(t_{k+1}))$ calculados por cada algoritmo. Esta restriccion garantiza que el estudiante comprenda y controle completamente el proceso de evaluacion matematica, en lugar de delegar el calculo a una caja negra del sistema operativo.
+
+\subsection{Estructura del Informe}
+\label{subsec:intro_estructura}
+
+El presente informe se organiza en las siguientes secciones:
+
+\begin{itemize}
+    \item La \textbf{Seccion~\ref{sec:fundamentos}} desarrolla el marco teorico y matematico de las curvas de Bezier, los polinomios base de Bernstein, el algoritmo de De Casteljau y el analisis de complejidad asintotica de cada metodo.
+    \item La \textbf{Seccion~\ref{sec:estado_arte}} presenta una revision de trabajos relacionados y el estado del arte en la evaluacion eficiente de curvas parametricas.
+    \item La \textbf{Seccion~\ref{sec:implementacion}} describe la arquitectura de software (patron MVC), las tecnologias utilizadas (C\#, Windows Forms, .NET 8.0), el diagrama de clases, las convenciones de nomenclatura, el manual de usuario y las decisiones de diseno de la interfaz.
+    \item La \textbf{Seccion~\ref{sec:experimentacion}} detalla la metodologia experimental, el entorno de pruebas y los resultados de tiempo de ejecucion obtenidos para las $24$ combinaciones $(n, N)$.
+    \item La \textbf{Seccion~\ref{sec:comparacion}} analiza las diferencias numericas entre ambos metodos, la prueba de estabilidad en grados altos y el contraste entre tiempos medidos y complejidad teorica.
+    \item La \textbf{Seccion~\ref{sec:conclusiones}} sintetiza las conclusiones del estudio, proporciona una matriz de recomendaciones por escenario de uso y plantea las limitaciones y lineas de trabajo futuro.
+\end{itemize}
