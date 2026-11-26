@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Drawing.Text;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -22,8 +24,9 @@ namespace BezierComparador
     public class frmPruebas : Form
     {
         private clsControladorPruebas objControladorPruebas;
+        private Panel pnlCabecera = null!;
         private Panel pnlSuperior = null!;
-        private GroupBox grpConfiguracion = null!;
+        private pnlTarjetaUI pnlTarjetaControles = null!;
         private Label lblRepeticiones = null!;
         private NumericUpDown numRepeticiones = null!;
         private Button btnEjecutar = null!;
@@ -36,11 +39,11 @@ namespace BezierComparador
         private TabControl tabContenedor = null!;
         private TabPage tabTablaResultados = null!;
         private TabPage tabGraficosComparativos = null!;
-        private GroupBox grpResultados = null!;
+        private pnlTarjetaUI pnlTarjetaTabla = null!;
         private DataGridView dgvResultados = null!;
+        private Panel pnlBannerEstabilidad = null!;
         private Label lblResumenEstabilidad = null!;
-        private GroupBox grpGraficos = null!;
-        private Panel pnlFiltroGraficos = null!;
+        private pnlTarjetaUI pnlTarjetaFiltros = null!;
         private Label lblGradoFijo = null!;
         private ComboBox cmbGradoFijo = null!;
         private Label lblMuestrasFijas = null!;
@@ -62,171 +65,312 @@ namespace BezierComparador
             InicializarComponentes();
         }
 
-        // Configura los controles visuales usando un TabControl con dos TabPages (Tabla y Graficos)
+        // Configura los controles visuales usando tarjetas responsivas y TabControl moderno
         private void InicializarComponentes()
         {
             this.Text = "Laboratorio de Pruebas: Bernstein vs De Casteljau";
-            this.Size = new Size(1240, 760);
-            this.MinimumSize = new Size(1020, 620);
+            this.Size = new Size(1300, 780);
+            this.MinimumSize = new Size(1020, 640);
             this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(245, 245, 245);
-            this.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            clsTemaUI.AplicarEstiloFormulario(this);
             this.DoubleBuffered = true;
 
             tipAyuda = new ToolTip();
+            clsTemaUI.ConfigurarToolTip(tipAyuda);
 
+            // 1. Cabecera superior limpia
+            pnlCabecera = new Panel();
+            pnlCabecera.Dock = DockStyle.Top;
+            pnlCabecera.Height = 56;
+            pnlCabecera.BackColor = clsTemaUI.ColCabeceraApp;
+            pnlCabecera.Padding = new Padding(clsTemaUI.EntEspacioLg, 8, clsTemaUI.EntEspacioLg, 8);
+
+            TableLayoutPanel tblCab = new TableLayoutPanel();
+            tblCab.Dock = DockStyle.Fill;
+            tblCab.ColumnCount = 2;
+            tblCab.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 68F));
+            tblCab.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 32F));
+
+            FlowLayoutPanel flwCabTitulos = new FlowLayoutPanel();
+            flwCabTitulos.Dock = DockStyle.Fill;
+            flwCabTitulos.FlowDirection = FlowDirection.TopDown;
+            flwCabTitulos.WrapContents = false;
+            flwCabTitulos.Margin = new Padding(0);
+
+            Label lblTitVentana = new Label();
+            lblTitVentana.Text = "Laboratorio de Pruebas y Benchmarking";
+            lblTitVentana.Font = clsTemaUI.FntTituloVentana;
+            lblTitVentana.ForeColor = clsTemaUI.ColTextoPrincipal;
+            lblTitVentana.AutoSize = true;
+            lblTitVentana.Margin = new Padding(0);
+
+            Label lblSubVentana = new Label();
+            lblSubVentana.Text = "Rendimiento temporal (Stopwatch) y estabilidad numerica frente a referencia decimal de 128 bits";
+            lblSubVentana.Font = clsTemaUI.FntSubtituloVentana;
+            lblSubVentana.ForeColor = clsTemaUI.ColTextoSecundario;
+            lblSubVentana.AutoSize = true;
+            lblSubVentana.Margin = new Padding(0, 1, 0, 0);
+
+            flwCabTitulos.Controls.Add(lblTitVentana);
+            flwCabTitulos.Controls.Add(lblSubVentana);
+
+            FlowLayoutPanel flwCabInsignia = new FlowLayoutPanel();
+            flwCabInsignia.Dock = DockStyle.Fill;
+            flwCabInsignia.FlowDirection = FlowDirection.RightToLeft;
+            flwCabInsignia.WrapContents = false;
+            flwCabInsignia.Padding = new Padding(0, 8, 0, 0);
+
+            Label lblInsigniaSuite = clsTemaUI.CrearInsignia("24 combinaciones · Warm-up JIT", clsTemaUI.ColPrimarioSuave, clsTemaUI.ColPrimario);
+            lblInsigniaSuite.Font = clsTemaUI.FntMonoespacioPeque;
+            flwCabInsignia.Controls.Add(lblInsigniaSuite);
+
+            tblCab.Controls.Add(flwCabTitulos, 0, 0);
+            tblCab.Controls.Add(flwCabInsignia, 1, 0);
+
+            Panel pnlBordeCab = new Panel();
+            pnlBordeCab.Dock = DockStyle.Bottom;
+            pnlBordeCab.Height = 1;
+            pnlBordeCab.BackColor = clsTemaUI.ColBordeSutil;
+
+            pnlCabecera.Controls.Add(tblCab);
+            pnlCabecera.Controls.Add(pnlBordeCab);
+
+            // 2. Barra de comandos superior compacta dentro de tarjeta responsiva (sin exceso de espacio blanco)
             pnlSuperior = new Panel();
             pnlSuperior.Dock = DockStyle.Top;
-            pnlSuperior.Height = 105;
-            pnlSuperior.Padding = new Padding(12, 8, 12, 6);
-            pnlSuperior.BackColor = Color.White;
+            pnlSuperior.Height = 104;
+            pnlSuperior.Padding = new Padding(clsTemaUI.EntEspacioMd, 10, clsTemaUI.EntEspacioMd, 4);
+            pnlSuperior.BackColor = clsTemaUI.ColFondoApp;
 
-            grpConfiguracion = new GroupBox();
-            grpConfiguracion.Text = "Configuracion, pruebas de estabilidad (grados 50 y 100) y exportacion para el informe";
-            grpConfiguracion.Dock = DockStyle.Fill;
+            pnlTarjetaControles = new pnlTarjetaUI();
+            pnlTarjetaControles.Dock = DockStyle.Fill;
+            pnlTarjetaControles.Padding = new Padding(12, 8, 12, 8);
+
+            TableLayoutPanel tblBarraComandos = new TableLayoutPanel();
+            tblBarraComandos.Dock = DockStyle.Fill;
+            tblBarraComandos.ColumnCount = 1;
+            tblBarraComandos.RowCount = 2;
+            tblBarraComandos.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tblBarraComandos.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
+            tblBarraComandos.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            FlowLayoutPanel flwAcciones = new FlowLayoutPanel();
+            flwAcciones.Dock = DockStyle.Fill;
+            flwAcciones.WrapContents = false;
+            flwAcciones.Margin = new Padding(0);
 
             lblRepeticiones = new Label();
-            lblRepeticiones.Text = "Repeticiones (min 10):";
-            lblRepeticiones.Location = new Point(14, 28);
+            lblRepeticiones.Text = "Repeticiones (mín. 10):";
+            lblRepeticiones.Font = clsTemaUI.FntCuerpoNegrita;
+            lblRepeticiones.ForeColor = clsTemaUI.ColTextoSecundario;
             lblRepeticiones.AutoSize = true;
+            lblRepeticiones.Margin = new Padding(0, 8, 6, 0);
 
             numRepeticiones = new NumericUpDown();
             numRepeticiones.Minimum = 10;
             numRepeticiones.Maximum = 100;
             numRepeticiones.Value = 10;
-            numRepeticiones.Location = new Point(150, 25);
-            numRepeticiones.Width = 60;
+            numRepeticiones.Width = 68;
+            numRepeticiones.Font = clsTemaUI.FntMonoespacio;
+            numRepeticiones.TextAlign = HorizontalAlignment.Right;
+            numRepeticiones.TabIndex = 0;
+            numRepeticiones.AccessibleName = "Repeticiones por prueba";
+            numRepeticiones.Margin = new Padding(0, 5, 14, 0);
             tipAyuda.SetToolTip(numRepeticiones, "Cantidad de repeticiones por prueba (con calentamiento previo)");
 
             btnEjecutar = new Button();
             btnEjecutar.Text = "Ejecutar pruebas";
-            btnEjecutar.Location = new Point(222, 22);
-            btnEjecutar.Size = new Size(138, 30);
-            btnEjecutar.BackColor = Color.FromArgb(0, 102, 204);
-            btnEjecutar.ForeColor = Color.White;
-            btnEjecutar.FlatStyle = FlatStyle.Flat;
-            btnEjecutar.Cursor = Cursors.Hand;
+            btnEjecutar.Size = new Size(148, clsTemaUI.EntAlturaBoton);
+            btnEjecutar.TabIndex = 1;
+            btnEjecutar.AccessibleName = "Ejecutar batería completa de pruebas";
+            btnEjecutar.Margin = new Padding(0, 0, 8, 0);
+            clsTemaUI.AplicarEstiloBotonPrimario(btnEjecutar);
             btnEjecutar.Click += BtnEjecutar_Click;
-            tipAyuda.SetToolTip(btnEjecutar, "Ejecuta los experimentos de rendimiento y actualiza tabla y graficos");
+            tipAyuda.SetToolTip(btnEjecutar, "Ejecuta los experimentos de rendimiento y actualiza tabla y gráficos");
 
             btnEstabilidad = new Button();
             btnEstabilidad.Text = "Estabilidad (n=50, 100)";
-            btnEstabilidad.Location = new Point(368, 22);
-            btnEstabilidad.Size = new Size(162, 30);
-            btnEstabilidad.BackColor = Color.FromArgb(40, 140, 70);
-            btnEstabilidad.ForeColor = Color.White;
-            btnEstabilidad.FlatStyle = FlatStyle.Flat;
-            btnEstabilidad.Cursor = Cursors.Hand;
+            btnEstabilidad.Size = new Size(176, clsTemaUI.EntAlturaBoton);
+            btnEstabilidad.TabIndex = 2;
+            btnEstabilidad.AccessibleName = "Ejecutar prueba de estabilidad numérica en grados 50 y 100";
+            btnEstabilidad.Margin = new Padding(0, 0, 14, 0);
+            clsTemaUI.AplicarEstiloBotonExito(btnEstabilidad);
             btnEstabilidad.Click += BtnEstabilidad_Click;
             tipAyuda.SetToolTip(btnEstabilidad, "Compara grados 50 y 100 contra referencia decimal de 128 bits");
 
             btnExportarCsv = new Button();
             btnExportarCsv.Text = "Exportar CSV";
-            btnExportarCsv.Location = new Point(538, 22);
-            btnExportarCsv.Size = new Size(118, 30);
-            btnExportarCsv.BackColor = Color.White;
-            btnExportarCsv.FlatStyle = FlatStyle.System;
-            btnExportarCsv.Cursor = Cursors.Hand;
+            btnExportarCsv.Size = new Size(124, clsTemaUI.EntAlturaBoton);
+            btnExportarCsv.TabIndex = 3;
+            btnExportarCsv.AccessibleName = "Exportar resultados a archivo CSV";
+            btnExportarCsv.Margin = new Padding(0, 0, 8, 0);
+            clsTemaUI.AplicarEstiloBotonSecundario(btnExportarCsv);
             btnExportarCsv.Click += BtnExportarCsv_Click;
             tipAyuda.SetToolTip(btnExportarCsv, "Exporta la tabla de resultados y estabilidad a un archivo CSV");
 
             btnGuardarPng = new Button();
             btnGuardarPng.Text = "Guardar PNG";
-            btnGuardarPng.Location = new Point(664, 22);
-            btnGuardarPng.Size = new Size(118, 30);
-            btnGuardarPng.BackColor = Color.White;
-            btnGuardarPng.FlatStyle = FlatStyle.System;
-            btnGuardarPng.Cursor = Cursors.Hand;
+            btnGuardarPng.Size = new Size(124, clsTemaUI.EntAlturaBoton);
+            btnGuardarPng.TabIndex = 4;
+            btnGuardarPng.AccessibleName = "Guardar gráficos comparativos como imágenes PNG";
+            btnGuardarPng.Margin = new Padding(0);
+            clsTemaUI.AplicarEstiloBotonSecundario(btnGuardarPng);
             btnGuardarPng.Click += BtnGuardarPng_Click;
-            tipAyuda.SetToolTip(btnGuardarPng, "Guarda los dos graficos comparativos en formato PNG para el informe LaTeX");
+            tipAyuda.SetToolTip(btnGuardarPng, "Guarda los dos gráficos comparativos en formato PNG para el informe LaTeX");
+
+            flwAcciones.Controls.Add(lblRepeticiones);
+            flwAcciones.Controls.Add(numRepeticiones);
+            flwAcciones.Controls.Add(btnEjecutar);
+            flwAcciones.Controls.Add(btnEstabilidad);
+            flwAcciones.Controls.Add(btnExportarCsv);
+            flwAcciones.Controls.Add(btnGuardarPng);
+
+            TableLayoutPanel tblEstado = new TableLayoutPanel();
+            tblEstado.Dock = DockStyle.Fill;
+            tblEstado.ColumnCount = 2;
+            tblEstado.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 74F));
+            tblEstado.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 26F));
+            tblEstado.Margin = new Padding(0);
+
+            lblEstado = new Label();
+            lblEstado.Text = "Estado: Listo. Presione «Ejecutar pruebas» o «Estabilidad» para iniciar.";
+            lblEstado.Dock = DockStyle.Fill;
+            lblEstado.AutoEllipsis = true;
+            lblEstado.TextAlign = ContentAlignment.MiddleLeft;
+            lblEstado.Font = clsTemaUI.FntEtiquetaPequeNegrita;
+            lblEstado.ForeColor = clsTemaUI.ColTextoSecundario;
 
             prgProgreso = new ProgressBar();
-            prgProgreso.Location = new Point(795, 25);
-            prgProgreso.Size = new Size(190, 24);
+            prgProgreso.Dock = DockStyle.Fill;
             prgProgreso.Minimum = 0;
             prgProgreso.Maximum = 100;
             prgProgreso.Value = 0;
+            prgProgreso.AccessibleName = "Progreso de ejecución de pruebas";
+            prgProgreso.Margin = new Padding(12, 4, 0, 4);
 
-            lblEstado = new Label();
-            lblEstado.Text = "Estado: Listo. Presione Ejecutar pruebas o Estabilidad para iniciar.";
-            lblEstado.Location = new Point(14, 62);
-            lblEstado.AutoSize = true;
-            lblEstado.ForeColor = Color.FromArgb(45, 45, 45);
+            tblEstado.Controls.Add(lblEstado, 0, 0);
+            tblEstado.Controls.Add(prgProgreso, 1, 0);
 
-            grpConfiguracion.Controls.Add(lblRepeticiones);
-            grpConfiguracion.Controls.Add(numRepeticiones);
-            grpConfiguracion.Controls.Add(btnEjecutar);
-            grpConfiguracion.Controls.Add(btnEstabilidad);
-            grpConfiguracion.Controls.Add(btnExportarCsv);
-            grpConfiguracion.Controls.Add(btnGuardarPng);
-            grpConfiguracion.Controls.Add(prgProgreso);
-            grpConfiguracion.Controls.Add(lblEstado);
-            pnlSuperior.Controls.Add(grpConfiguracion);
+            tblBarraComandos.Controls.Add(flwAcciones, 0, 0);
+            tblBarraComandos.Controls.Add(tblEstado, 0, 1);
+            pnlTarjetaControles.Controls.Add(tblBarraComandos);
+            pnlSuperior.Controls.Add(pnlTarjetaControles);
 
+            // 3. Cuerpo principal con TabControl estilizado
             pnlCuerpo = new Panel();
             pnlCuerpo.Dock = DockStyle.Fill;
-            pnlCuerpo.Padding = new Padding(12, 8, 12, 12);
+            pnlCuerpo.Padding = new Padding(clsTemaUI.EntEspacioMd, 6, clsTemaUI.EntEspacioMd, clsTemaUI.EntEspacioMd);
+            pnlCuerpo.BackColor = clsTemaUI.ColFondoApp;
 
             tabContenedor = new TabControl();
             tabContenedor.Dock = DockStyle.Fill;
-            tabContenedor.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular);
+            tabContenedor.TabIndex = 5;
+            tabContenedor.AccessibleName = "Vistas del laboratorio de pruebas";
+            tabContenedor.Font = clsTemaUI.FntCuerpoNegrita;
+            tabContenedor.DrawMode = TabDrawMode.OwnerDrawFixed;
+            tabContenedor.SizeMode = TabSizeMode.Fixed;
+            tabContenedor.ItemSize = new Size(310, 36);
+            tabContenedor.DrawItem += TabContenedor_DrawItem;
 
             tabTablaResultados = new TabPage("1. Tabla de Resultados");
-            tabTablaResultados.BackColor = Color.FromArgb(245, 245, 245);
-            tabTablaResultados.Padding = new Padding(8);
+            tabTablaResultados.BackColor = clsTemaUI.ColFondoApp;
+            tabTablaResultados.Padding = new Padding(0, 8, 0, 0);
 
-            tabGraficosComparativos = new TabPage("2. Graficos Comparativos (Tiempo vs Muestras y Grado)");
-            tabGraficosComparativos.BackColor = Color.FromArgb(245, 245, 245);
-            tabGraficosComparativos.Padding = new Padding(8);
+            tabGraficosComparativos = new TabPage("2. Gráficos Comparativos (Muestras y Grado)");
+            tabGraficosComparativos.BackColor = clsTemaUI.ColFondoApp;
+            tabGraficosComparativos.Padding = new Padding(0, 8, 0, 0);
 
-            // Pestana 1: Tabla de resultados
-            grpResultados = new GroupBox();
-            grpResultados.Text = "Tabla comparativa de tiempos y errores (en verde el metodo mas rapido por fila)";
-            grpResultados.Dock = DockStyle.Fill;
-            grpResultados.Padding = new Padding(8);
+            // Pestana 1: Tarjeta de tabla de resultados + banner de estabilidad
+            pnlTarjetaTabla = new pnlTarjetaUI();
+            pnlTarjetaTabla.Dock = DockStyle.Fill;
+            pnlTarjetaTabla.Padding = new Padding(12);
+
+            Panel pnlCabTabla = new Panel();
+            pnlCabTabla.Dock = DockStyle.Top;
+            pnlCabTabla.Height = 32;
+            pnlCabTabla.Padding = new Padding(0, 0, 0, 6);
+
+            Label lblTitTabla = new Label();
+            lblTitTabla.Text = "Tabla comparativa de tiempos y errores numericos";
+            lblTitTabla.Font = clsTemaUI.FntTituloTarjeta;
+            lblTitTabla.ForeColor = clsTemaUI.ColTextoPrincipal;
+            lblTitTabla.Dock = DockStyle.Left;
+            lblTitTabla.AutoSize = true;
+
+            Label lblInsigniaVerde = clsTemaUI.CrearInsignia("Verde = metodo mas rapido por fila", clsTemaUI.ColExitoSuave, clsTemaUI.ColExitoTextoOscuro);
+            lblInsigniaVerde.Dock = DockStyle.Right;
+
+            pnlCabTabla.Controls.Add(lblTitTabla);
+            pnlCabTabla.Controls.Add(lblInsigniaVerde);
+
+            pnlBannerEstabilidad = new Panel();
+            pnlBannerEstabilidad.Dock = DockStyle.Bottom;
+            pnlBannerEstabilidad.Height = 38;
+            pnlBannerEstabilidad.BackColor = clsTemaUI.ColExitoSuave;
+            pnlBannerEstabilidad.Padding = new Padding(12, 0, 12, 0);
+            pnlBannerEstabilidad.Paint += (objRem, objArgs) =>
+            {
+                using (Pen penBorde = new Pen(clsTemaUI.ColExitoBorde, 1F))
+                {
+                    objArgs.Graphics.DrawRectangle(penBorde, 0, 0, pnlBannerEstabilidad.Width - 1, pnlBannerEstabilidad.Height - 1);
+                }
+            };
 
             lblResumenEstabilidad = new Label();
-            lblResumenEstabilidad.Dock = DockStyle.Bottom;
-            lblResumenEstabilidad.Height = 26;
-            lblResumenEstabilidad.Text = "Estabilidad numerica (grados 50 y 100 vs referencia decimal): pendiente de ejecucion.";
-            lblResumenEstabilidad.ForeColor = Color.FromArgb(0, 80, 40);
+            lblResumenEstabilidad.Dock = DockStyle.Fill;
+            lblResumenEstabilidad.Text = "Estabilidad numerica (grados 50 y 100 vs referencia decimal 128 bits): pendiente de ejecucion.";
+            lblResumenEstabilidad.Font = clsTemaUI.FntMonoespacioPeque;
+            lblResumenEstabilidad.ForeColor = clsTemaUI.ColExitoTextoOscuro;
             lblResumenEstabilidad.TextAlign = ContentAlignment.MiddleLeft;
+            pnlBannerEstabilidad.Controls.Add(lblResumenEstabilidad);
+
+            Panel pnlEspacioTabla = new Panel();
+            pnlEspacioTabla.Dock = DockStyle.Bottom;
+            pnlEspacioTabla.Height = 8;
+            pnlEspacioTabla.BackColor = clsTemaUI.ColSuperficieTarjeta;
 
             dgvResultados = new DataGridView();
             dgvResultados.Dock = DockStyle.Fill;
-            dgvResultados.BackgroundColor = Color.White;
+            dgvResultados.TabIndex = 6;
+            dgvResultados.AccessibleName = "Tabla comparativa de resultados experimentales";
             dgvResultados.AllowUserToAddRows = false;
             dgvResultados.AllowUserToDeleteRows = false;
             dgvResultados.ReadOnly = true;
             dgvResultados.RowHeadersVisible = false;
             dgvResultados.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvResultados.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            clsTemaUI.AplicarEstiloDataGridView(dgvResultados);
             ConfigurarColumnasTabla();
 
-            grpResultados.Controls.Add(dgvResultados);
-            grpResultados.Controls.Add(lblResumenEstabilidad);
-            tabTablaResultados.Controls.Add(grpResultados);
+            pnlTarjetaTabla.Controls.Add(dgvResultados);
+            pnlTarjetaTabla.Controls.Add(pnlEspacioTabla);
+            pnlTarjetaTabla.Controls.Add(pnlBannerEstabilidad);
+            pnlTarjetaTabla.Controls.Add(pnlCabTabla);
+            tabTablaResultados.Controls.Add(pnlTarjetaTabla);
 
-            // Pestana 2: Graficos comparativos propios con DrawLine
-            grpGraficos = new GroupBox();
-            grpGraficos.Text = "Graficos comparativos propios (dibujados con DrawLine)";
-            grpGraficos.Dock = DockStyle.Fill;
-            grpGraficos.Padding = new Padding(8);
+            // Pestana 2: Filtros en tarjeta compacta + 2 tarjetas de graficos lado a lado
+            pnlTarjetaFiltros = new pnlTarjetaUI();
+            pnlTarjetaFiltros.Dock = DockStyle.Top;
+            pnlTarjetaFiltros.Height = 46;
+            pnlTarjetaFiltros.Padding = new Padding(12, 8, 12, 8);
 
-            pnlFiltroGraficos = new Panel();
-            pnlFiltroGraficos.Dock = DockStyle.Top;
-            pnlFiltroGraficos.Height = 38;
-            pnlFiltroGraficos.BackColor = Color.White;
+            FlowLayoutPanel flwFiltros = new FlowLayoutPanel();
+            flwFiltros.Dock = DockStyle.Fill;
+            flwFiltros.WrapContents = false;
+            flwFiltros.Margin = new Padding(0);
 
             lblGradoFijo = new Label();
             lblGradoFijo.Text = "Grado para Tiempo vs Muestras:";
-            lblGradoFijo.Location = new Point(10, 10);
+            lblGradoFijo.Font = clsTemaUI.FntCuerpoNegrita;
+            lblGradoFijo.ForeColor = clsTemaUI.ColTextoSecundario;
             lblGradoFijo.AutoSize = true;
+            lblGradoFijo.Margin = new Padding(0, 6, 6, 4);
 
             cmbGradoFijo = new ComboBox();
             cmbGradoFijo.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbGradoFijo.Location = new Point(215, 6);
-            cmbGradoFijo.Width = 75;
+            cmbGradoFijo.Width = 76;
+            cmbGradoFijo.Font = clsTemaUI.FntMonoespacio;
+            cmbGradoFijo.Margin = new Padding(0, 2, 18, 2);
             int[] arrGrados = objControladorPruebas.ArrGradosPrueba;
             for (int entI = 0; entI < arrGrados.Length; entI++)
             {
@@ -237,13 +381,16 @@ namespace BezierComparador
 
             lblMuestrasFijas = new Label();
             lblMuestrasFijas.Text = "Muestras para Tiempo vs Grado:";
-            lblMuestrasFijas.Location = new Point(310, 10);
+            lblMuestrasFijas.Font = clsTemaUI.FntCuerpoNegrita;
+            lblMuestrasFijas.ForeColor = clsTemaUI.ColTextoSecundario;
             lblMuestrasFijas.AutoSize = true;
+            lblMuestrasFijas.Margin = new Padding(0, 6, 6, 4);
 
             cmbMuestrasFijas = new ComboBox();
             cmbMuestrasFijas.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbMuestrasFijas.Location = new Point(515, 6);
-            cmbMuestrasFijas.Width = 95;
+            cmbMuestrasFijas.Width = 96;
+            cmbMuestrasFijas.Font = clsTemaUI.FntMonoespacio;
+            cmbMuestrasFijas.Margin = new Padding(0, 2, 20, 2);
             int[] arrMuestras = objControladorPruebas.ArrMuestrasPrueba;
             for (int entI = 0; entI < arrMuestras.Length; entI++)
             {
@@ -252,26 +399,24 @@ namespace BezierComparador
             cmbMuestrasFijas.SelectedIndex = arrMuestras.Length - 1;
             cmbMuestrasFijas.SelectedIndexChanged += FiltroGraficos_Changed;
 
-            lblLeyendaAzul = new Label();
-            lblLeyendaAzul.Text = "[Azul] Polinomios de Bernstein";
-            lblLeyendaAzul.ForeColor = Color.FromArgb(0, 102, 204);
-            lblLeyendaAzul.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            lblLeyendaAzul.Location = new Point(630, 10);
-            lblLeyendaAzul.AutoSize = true;
+            lblLeyendaAzul = clsTemaUI.CrearInsignia("● Polinomios de Bernstein", clsTemaUI.ColPrimarioSuave, clsTemaUI.ColPrimario);
+            lblLeyendaAzul.Margin = new Padding(0, 2, 8, 2);
 
-            lblLeyendaNaranja = new Label();
-            lblLeyendaNaranja.Text = "[Naranja] Algoritmo de De Casteljau";
-            lblLeyendaNaranja.ForeColor = Color.FromArgb(230, 115, 0);
-            lblLeyendaNaranja.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            lblLeyendaNaranja.Location = new Point(835, 10);
-            lblLeyendaNaranja.AutoSize = true;
+            lblLeyendaNaranja = clsTemaUI.CrearInsignia("● Algoritmo de De Casteljau", clsTemaUI.ColCasteljauSuave, clsTemaUI.ColCasteljau);
+            lblLeyendaNaranja.Margin = new Padding(0, 2, 0, 2);
 
-            pnlFiltroGraficos.Controls.Add(lblGradoFijo);
-            pnlFiltroGraficos.Controls.Add(cmbGradoFijo);
-            pnlFiltroGraficos.Controls.Add(lblMuestrasFijas);
-            pnlFiltroGraficos.Controls.Add(cmbMuestrasFijas);
-            pnlFiltroGraficos.Controls.Add(lblLeyendaAzul);
-            pnlFiltroGraficos.Controls.Add(lblLeyendaNaranja);
+            flwFiltros.Controls.Add(lblGradoFijo);
+            flwFiltros.Controls.Add(cmbGradoFijo);
+            flwFiltros.Controls.Add(lblMuestrasFijas);
+            flwFiltros.Controls.Add(cmbMuestrasFijas);
+            flwFiltros.Controls.Add(lblLeyendaAzul);
+            flwFiltros.Controls.Add(lblLeyendaNaranja);
+            pnlTarjetaFiltros.Controls.Add(flwFiltros);
+
+            Panel pnlSepGraficos = new Panel();
+            pnlSepGraficos.Dock = DockStyle.Top;
+            pnlSepGraficos.Height = 10;
+            pnlSepGraficos.BackColor = clsTemaUI.ColFondoApp;
 
             tblGraficos = new TableLayoutPanel();
             tblGraficos.Dock = DockStyle.Fill;
@@ -281,26 +426,34 @@ namespace BezierComparador
             tblGraficos.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             tblGraficos.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
+            pnlTarjetaUI pnlTarjetaGrafMuestras = new pnlTarjetaUI();
+            pnlTarjetaGrafMuestras.Dock = DockStyle.Fill;
+            pnlTarjetaGrafMuestras.Padding = new Padding(4);
+            pnlTarjetaGrafMuestras.Margin = new Padding(0, 0, 5, 0);
+
             pnlGraficoMuestras = new pnlGraficoDobleBuffer();
             pnlGraficoMuestras.Dock = DockStyle.Fill;
-            pnlGraficoMuestras.BackColor = Color.White;
-            pnlGraficoMuestras.Margin = new Padding(4);
-            pnlGraficoMuestras.BorderStyle = BorderStyle.FixedSingle;
+            pnlGraficoMuestras.BackColor = clsTemaUI.ColSuperficieTarjeta;
             pnlGraficoMuestras.Paint += PnlGraficoMuestras_Paint;
+            pnlTarjetaGrafMuestras.Controls.Add(pnlGraficoMuestras);
+
+            pnlTarjetaUI pnlTarjetaGrafGrados = new pnlTarjetaUI();
+            pnlTarjetaGrafGrados.Dock = DockStyle.Fill;
+            pnlTarjetaGrafGrados.Padding = new Padding(4);
+            pnlTarjetaGrafGrados.Margin = new Padding(5, 0, 0, 0);
 
             pnlGraficoGrados = new pnlGraficoDobleBuffer();
             pnlGraficoGrados.Dock = DockStyle.Fill;
-            pnlGraficoGrados.BackColor = Color.White;
-            pnlGraficoGrados.Margin = new Padding(4);
-            pnlGraficoGrados.BorderStyle = BorderStyle.FixedSingle;
+            pnlGraficoGrados.BackColor = clsTemaUI.ColSuperficieTarjeta;
             pnlGraficoGrados.Paint += PnlGraficoGrados_Paint;
+            pnlTarjetaGrafGrados.Controls.Add(pnlGraficoGrados);
 
-            tblGraficos.Controls.Add(pnlGraficoMuestras, 0, 0);
-            tblGraficos.Controls.Add(pnlGraficoGrados, 1, 0);
+            tblGraficos.Controls.Add(pnlTarjetaGrafMuestras, 0, 0);
+            tblGraficos.Controls.Add(pnlTarjetaGrafGrados, 1, 0);
 
-            grpGraficos.Controls.Add(tblGraficos);
-            grpGraficos.Controls.Add(pnlFiltroGraficos);
-            tabGraficosComparativos.Controls.Add(grpGraficos);
+            tabGraficosComparativos.Controls.Add(tblGraficos);
+            tabGraficosComparativos.Controls.Add(pnlSepGraficos);
+            tabGraficosComparativos.Controls.Add(pnlTarjetaFiltros);
 
             tabContenedor.TabPages.Add(tabTablaResultados);
             tabContenedor.TabPages.Add(tabGraficosComparativos);
@@ -308,9 +461,59 @@ namespace BezierComparador
 
             this.Controls.Add(pnlCuerpo);
             this.Controls.Add(pnlSuperior);
+            this.Controls.Add(pnlCabecera);
         }
 
-        // Define las columnas de la tabla de resultados
+        // Dibuja las pestanas del TabControl con estilo plano moderno e indicador inferior activo
+        private void TabContenedor_DrawItem(object? objRemitente, DrawItemEventArgs objArgs)
+        {
+            TabPage objPagina = tabContenedor.TabPages[objArgs.Index];
+            Rectangle objRect = objArgs.Bounds;
+            bool bolSeleccionada = (objArgs.State & DrawItemState.Selected) == DrawItemState.Selected;
+
+            Color colFondo = bolSeleccionada ? clsTemaUI.ColSuperficieTarjeta : clsTemaUI.ColSuperficieSutil;
+            Color colTexto = bolSeleccionada ? clsTemaUI.ColPrimario : clsTemaUI.ColTextoSecundario;
+
+            using (Brush brsFondo = new SolidBrush(colFondo))
+            {
+                objArgs.Graphics.FillRectangle(brsFondo, objRect);
+            }
+
+            if (bolSeleccionada)
+            {
+                using (Brush brsIndicador = new SolidBrush(clsTemaUI.ColPrimario))
+                {
+                    objArgs.Graphics.FillRectangle(brsIndicador, objRect.Left, objRect.Bottom - 3, objRect.Width, 3);
+                }
+            }
+            else
+            {
+                using (Pen penDiv = new Pen(clsTemaUI.ColBordeSutil, 1F))
+                {
+                    objArgs.Graphics.DrawLine(penDiv, objRect.Left, objRect.Bottom - 1, objRect.Right, objRect.Bottom - 1);
+                }
+            }
+
+            if ((objArgs.State & DrawItemState.Focus) == DrawItemState.Focus)
+            {
+                Rectangle objRectFoco = new Rectangle(objRect.X + 2, objRect.Y + 2, objRect.Width - 5, objRect.Height - 6);
+                using (Pen penFoco = new Pen(clsTemaUI.ColFoco, 1.5F))
+                {
+                    penFoco.DashStyle = DashStyle.Dot;
+                    objArgs.Graphics.DrawRectangle(penFoco, objRectFoco);
+                }
+            }
+
+            TextRenderer.DrawText(
+                objArgs.Graphics,
+                objPagina.Text,
+                bolSeleccionada ? clsTemaUI.FntCuerpoNegrita : clsTemaUI.FntCuerpo,
+                objRect,
+                colTexto,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+        }
+
+        // Define las columnas de la tabla de resultados y alineacion tabular
         private void ConfigurarColumnasTabla()
         {
             dgvResultados.Columns.Clear();
@@ -323,6 +526,15 @@ namespace BezierComparador
             dgvResultados.Columns.Add("colErrorMax", "Error Maximo");
             dgvResultados.Columns.Add("colErrorProm", "Error Promedio");
             dgvResultados.Columns.Add("colMasRapido", "Mas Rapido");
+
+            for (int entI = 0; entI <= 7; entI++)
+            {
+                dgvResultados.Columns[entI].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
+                dgvResultados.Columns[entI].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
+            }
+            dgvResultados.Columns[8].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dgvResultados.Columns[8].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dgvResultados.Columns[8].DefaultCellStyle.Font = clsTemaUI.FntCuerpoNegrita;
         }
 
         // Redibuja ambos paneles cuando cambia el filtro de grado o muestras
@@ -342,11 +554,12 @@ namespace BezierComparador
 
             bolEjecutando = true;
             btnEjecutar.Enabled = false;
+            btnEjecutar.Text = "Ejecutando…";
             btnEstabilidad.Enabled = false;
             numRepeticiones.Enabled = false;
             dgvResultados.Rows.Clear();
             prgProgreso.Value = 0;
-            lblEstado.Text = "Estado: Iniciando experimentos...";
+            lblEstado.Text = "Estado: Iniciando experimentos…";
 
             int entRepeticiones = (int)numRepeticiones.Value;
 
@@ -379,6 +592,7 @@ namespace BezierComparador
 
             prgProgreso.Value = 100;
             lblEstado.Text = "Estado: Pruebas completadas. Puede cambiar a la pestana '2. Graficos Comparativos'.";
+            btnEjecutar.Text = "Ejecutar pruebas";
             btnEjecutar.Enabled = true;
             btnEstabilidad.Enabled = true;
             numRepeticiones.Enabled = true;
@@ -395,13 +609,15 @@ namespace BezierComparador
 
             bolEjecutando = true;
             btnEstabilidad.Enabled = false;
-            lblEstado.Text = "Estado: Evaluando estabilidad en grados 50 y 100 contra referencia decimal...";
+            btnEstabilidad.Text = "Evaluando…";
+            lblEstado.Text = "Estado: Evaluando estabilidad en grados 50 y 100 contra referencia decimal…";
 
             List<clsFilaEstabilidad> lstEst = await Task.Run(() =>
                 objControladorPruebas.EjecutarPruebaEstabilidad(1000));
 
             ActualizarEtiquetaEstabilidad(lstEst);
             lblEstado.Text = "Estado: Prueba de estabilidad numerica completada.";
+            btnEstabilidad.Text = "Estabilidad (n=50, 100)";
             btnEstabilidad.Enabled = true;
             bolEjecutando = false;
 
@@ -519,7 +735,8 @@ namespace BezierComparador
         private void PoblarTablaResultados(List<clsFilaPrueba> lstFilas)
         {
             dgvResultados.Rows.Clear();
-            Color colVerdeGanador = Color.FromArgb(200, 242, 205);
+            Color colVerdeGanador = clsTemaUI.ColExitoSuave;
+            Color colTextoGanador = clsTemaUI.ColExitoTextoOscuro;
 
             for (int entI = 0; entI < lstFilas.Count; entI++)
             {
@@ -538,16 +755,23 @@ namespace BezierComparador
 
                 DataGridViewRow objFilaVisual = dgvResultados.Rows[entIndiceFila];
                 objFilaVisual.Cells[8].Style.BackColor = colVerdeGanador;
+                objFilaVisual.Cells[8].Style.ForeColor = colTextoGanador;
 
                 if (objFila.dblTiempoBernsteinMs <= objFila.dblTiempoDeCasteljauMs)
                 {
                     objFilaVisual.Cells[2].Style.BackColor = colVerdeGanador;
+                    objFilaVisual.Cells[2].Style.ForeColor = colTextoGanador;
+                    objFilaVisual.Cells[2].Style.Font = clsTemaUI.FntMonoespacioNegrita;
                 }
                 else
                 {
                     objFilaVisual.Cells[4].Style.BackColor = colVerdeGanador;
+                    objFilaVisual.Cells[4].Style.ForeColor = colTextoGanador;
+                    objFilaVisual.Cells[4].Style.Font = clsTemaUI.FntMonoespacioNegrita;
                 }
             }
+
+            dgvResultados.ClearSelection();
         }
 
         // Evento Paint para el grafico de Tiempo vs Muestras
@@ -632,7 +856,7 @@ namespace BezierComparador
                 lstTiemposCasteljau);
         }
 
-        // Dibuja ejes, leyenda y series usando unicamente DrawLine, FillEllipse y DrawString
+        // Dibuja ejes, leyenda y series usando unicamente DrawLine, FillEllipse, FillPolygon y DrawString
         private void DibujarGraficoComparativo(
             Graphics objLienzo,
             Rectangle objArea,
@@ -642,35 +866,64 @@ namespace BezierComparador
             List<double> lstSerieBernstein,
             List<double> lstSerieCasteljau)
         {
-            objLienzo.Clear(Color.White);
+            objLienzo.SmoothingMode = SmoothingMode.AntiAlias;
+            objLienzo.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+            objLienzo.Clear(clsTemaUI.ColSuperficieTarjeta);
 
-            using (Font fntTitulo = new Font("Segoe UI", 9.5F, FontStyle.Bold))
-            using (Font fntEjes = new Font("Segoe UI", 8F, FontStyle.Regular))
-            using (Brush brsTexto = new SolidBrush(Color.FromArgb(40, 40, 40)))
-            using (Pen penEje = new Pen(Color.FromArgb(100, 100, 100), 1.5F))
-            using (Pen penGuia = new Pen(Color.FromArgb(228, 228, 228), 1F))
-            using (Pen penBernstein = new Pen(Color.FromArgb(0, 102, 204), 2.2F))
-            using (Pen penCasteljau = new Pen(Color.FromArgb(230, 115, 0), 2.2F))
-            using (Brush brsBernstein = new SolidBrush(Color.FromArgb(0, 102, 204)))
-            using (Brush brsCasteljau = new SolidBrush(Color.FromArgb(230, 115, 0)))
+            using (Font fntTitulo = new Font("Segoe UI", 10F, FontStyle.Bold))
+            using (Font fntEjes = new Font("Consolas", 8F, FontStyle.Regular))
+            using (Font fntEtiquetaEje = new Font("Segoe UI", 8.5F, FontStyle.Bold))
+            using (Brush brsTexto = new SolidBrush(clsTemaUI.ColTextoPrincipal))
+            using (Brush brsSecundario = new SolidBrush(clsTemaUI.ColTextoSecundario))
+            using (Brush brsFondoPlot = new SolidBrush(clsTemaUI.ColFondoApp))
+            using (Pen penEje = new Pen(clsTemaUI.ColTextoSecundario, 1.5F))
+            using (Pen penGuia = new Pen(clsTemaUI.ColBordeSutil, 1F))
+            using (Pen penBernstein = new Pen(clsTemaUI.ColPrimario, 2.6F))
+            using (Pen penCasteljau = new Pen(clsTemaUI.ColCasteljauTrazo, 2.6F))
+            using (Pen penHaloBlanco = new Pen(Color.White, 1.6F))
+            using (Brush brsBernstein = new SolidBrush(clsTemaUI.ColPrimario))
+            using (Brush brsCasteljau = new SolidBrush(clsTemaUI.ColCasteljauTrazo))
             {
-                objLienzo.DrawString(cadTitulo, fntTitulo, brsTexto, 14, 8);
+                penGuia.DashStyle = DashStyle.Dot;
+                penBernstein.StartCap = LineCap.Round;
+                penBernstein.EndCap = LineCap.Round;
+                penCasteljau.StartCap = LineCap.Round;
+                penCasteljau.EndCap = LineCap.Round;
+
+                objLienzo.DrawString(cadTitulo, fntTitulo, brsTexto, 16, 10);
 
                 if (lstEtiquetasX.Count == 0)
                 {
+                    int entAnchoVacio = Math.Min(360, objArea.Width - 40);
+                    int entAltoVacio = 74;
+                    int entX0 = (objArea.Width - entAnchoVacio) / 2;
+                    int entY0 = (objArea.Height - entAltoVacio) / 2;
+                    Rectangle objCajaVacia = new Rectangle(Math.Max(12, entX0), Math.Max(40, entY0), Math.Max(120, entAnchoVacio), entAltoVacio);
+
+                    using (Pen penMarcoVacio = new Pen(clsTemaUI.ColBordeTarjeta, 1F))
+                    {
+                        objLienzo.FillRectangle(brsFondoPlot, objCajaVacia);
+                        objLienzo.DrawRectangle(penMarcoVacio, objCajaVacia);
+                    }
                     objLienzo.DrawString(
-                        "Presione 'Ejecutar pruebas' para generar el grafico.",
-                        fntEjes,
+                        "Sin datos experimentales todavia",
+                        fntEtiquetaEje,
                         brsTexto,
-                        20,
-                        objArea.Height / 2 - 10);
+                        objCajaVacia.X + 16,
+                        objCajaVacia.Y + 14);
+                    objLienzo.DrawString(
+                        "Presione 'Ejecutar pruebas' para calcular y trazar las series.",
+                        clsTemaUI.FntEtiquetaPeque,
+                        brsSecundario,
+                        objCajaVacia.X + 16,
+                        objCajaVacia.Y + 38);
                     return;
                 }
 
-                int entMargenIzq = 64;
-                int entMargenDer = 24;
-                int entMargenSup = 36;
-                int entMargenInf = 48;
+                int entMargenIzq = 72;
+                int entMargenDer = 28;
+                int entMargenSup = 44;
+                int entMargenInf = 54;
 
                 int entAnchoGrafico = objArea.Width - entMargenIzq - entMargenDer;
                 int entAltoGrafico = objArea.Height - entMargenSup - entMargenInf;
@@ -682,6 +935,9 @@ namespace BezierComparador
 
                 int entOrigenX = entMargenIzq;
                 int entOrigenY = entMargenSup + entAltoGrafico;
+
+                // Fondo sutil del area de trazado
+                objLienzo.FillRectangle(brsFondoPlot, entOrigenX, entMargenSup, entAnchoGrafico, entAltoGrafico);
 
                 // Determina el valor maximo del eje Y para escalar los puntos
                 double dblMaximoY = 0.0001;
@@ -696,9 +952,9 @@ namespace BezierComparador
                         dblMaximoY = lstSerieCasteljau[entI];
                     }
                 }
-                dblMaximoY = dblMaximoY * 1.12;
+                dblMaximoY = dblMaximoY * 1.15;
 
-                // Dibuja lineas guia horizontales y marcas del eje Y (Tiempo en ms)
+                // Dibuja lineas guia horizontales punteadas y marcas del eje Y (Tiempo en ms)
                 int entDivisionesY = 4;
                 for (int entPaso = 0; entPaso <= entDivisionesY; entPaso++)
                 {
@@ -707,9 +963,12 @@ namespace BezierComparador
                     double dblValorY = dblFraccion * dblMaximoY;
 
                     objLienzo.DrawLine(penGuia, entOrigenX, entY, entOrigenX + entAnchoGrafico, entY);
-                    string cadMarcaY = dblValorY.ToString("F2");
-                    objLienzo.DrawString(cadMarcaY, fntEjes, brsTexto, 6, entY - 7);
+                    string cadMarcaY = dblValorY >= 10.0 ? dblValorY.ToString("F1") : dblValorY.ToString("F2");
+                    SizeF objTamY = objLienzo.MeasureString(cadMarcaY, fntEjes);
+                    objLienzo.DrawString(cadMarcaY, fntEjes, brsSecundario, entOrigenX - objTamY.Width - 6, entY - objTamY.Height / 2F);
                 }
+
+                objLienzo.DrawString("ms", clsTemaUI.FntMonoespacioPeque, brsSecundario, 16, entMargenSup - 14);
 
                 // Dibuja los ejes principales X y Y con DrawLine
                 objLienzo.DrawLine(penEje, entOrigenX, entMargenSup, entOrigenX, entOrigenY);
@@ -735,8 +994,9 @@ namespace BezierComparador
                     arrPuntosBernstein[entI] = new Point(entX, entYBernstein);
                     arrPuntosCasteljau[entI] = new Point(entX, entYCasteljau);
 
-                    objLienzo.DrawLine(penEje, entX, entOrigenY, entX, entOrigenY + 4);
-                    objLienzo.DrawString(lstEtiquetasX[entI], fntEjes, brsTexto, entX - 18, entOrigenY + 6);
+                    objLienzo.DrawLine(penEje, entX, entOrigenY, entX, entOrigenY + 5);
+                    SizeF objTamX = objLienzo.MeasureString(lstEtiquetasX[entI], fntEjes);
+                    objLienzo.DrawString(lstEtiquetasX[entI], fntEjes, brsSecundario, entX - objTamX.Width / 2F, entOrigenY + 8);
                 }
 
                 // Une los puntos consecutivos con segmentos rectos (DrawLine)
@@ -746,23 +1006,75 @@ namespace BezierComparador
                     objLienzo.DrawLine(penCasteljau, arrPuntosCasteljau[entI], arrPuntosCasteljau[entI + 1]);
                 }
 
-                // Dibuja los marcadores circulares sobre cada muestra medida
+                // Dibuja marcadores diferenciados por forma y color: circulo (Bernstein) y rombo (De Casteljau)
                 for (int entI = 0; entI < entCantidadPuntos; entI++)
                 {
-                    objLienzo.FillEllipse(brsBernstein, arrPuntosBernstein[entI].X - 4, arrPuntosBernstein[entI].Y - 4, 8, 8);
-                    objLienzo.FillEllipse(brsCasteljau, arrPuntosCasteljau[entI].X - 4, arrPuntosCasteljau[entI].Y - 4, 8, 8);
+                    Point ptoB = arrPuntosBernstein[entI];
+                    objLienzo.FillEllipse(brsBernstein, ptoB.X - 4.5F, ptoB.Y - 4.5F, 9F, 9F);
+                    objLienzo.DrawEllipse(penHaloBlanco, ptoB.X - 4.5F, ptoB.Y - 4.5F, 9F, 9F);
+
+                    Point ptoC = arrPuntosCasteljau[entI];
+                    Point[] arrRombo = new Point[]
+                    {
+                        new Point(ptoC.X, ptoC.Y - 5),
+                        new Point(ptoC.X + 5, ptoC.Y),
+                        new Point(ptoC.X, ptoC.Y + 5),
+                        new Point(ptoC.X - 5, ptoC.Y)
+                    };
+                    objLienzo.FillPolygon(brsCasteljau, arrRombo);
+                    objLienzo.DrawPolygon(penHaloBlanco, arrRombo);
                 }
 
-                // Etiqueta del eje X y leyenda interna
-                objLienzo.DrawString(cadEjeX, fntEjes, brsTexto, entOrigenX + entAnchoGrafico / 2 - 45, objArea.Height - 20);
+                // Anotacion directa del ultimo valor de cada serie para lectura inmediata
+                if (entCantidadPuntos > 0)
+                {
+                    int entUltimo = entCantidadPuntos - 1;
+                    string cadUltB = lstSerieBernstein[entUltimo].ToString("F2") + " ms";
+                    string cadUltC = lstSerieCasteljau[entUltimo].ToString("F2") + " ms";
+                    SizeF objTamB = objLienzo.MeasureString(cadUltB, fntEjes);
+                    SizeF objTamC = objLienzo.MeasureString(cadUltC, fntEjes);
 
-                int entLeyendaX = entOrigenX + 12;
-                int entLeyendaY = entMargenSup + 6;
-                objLienzo.DrawLine(penBernstein, entLeyendaX, entLeyendaY + 6, entLeyendaX + 18, entLeyendaY + 6);
-                objLienzo.DrawString("Bernstein", fntEjes, brsBernstein, entLeyendaX + 22, entLeyendaY - 1);
+                    int entPosYB = arrPuntosBernstein[entUltimo].Y - 18;
+                    int entPosYC = arrPuntosCasteljau[entUltimo].Y - 18;
+                    if (Math.Abs(entPosYB - entPosYC) < 14)
+                    {
+                        entPosYB = Math.Min(entOrigenY - 16, arrPuntosBernstein[entUltimo].Y + 6);
+                    }
 
-                objLienzo.DrawLine(penCasteljau, entLeyendaX + 95, entLeyendaY + 6, entLeyendaX + 113, entLeyendaY + 6);
-                objLienzo.DrawString("De Casteljau", fntEjes, brsCasteljau, entLeyendaX + 117, entLeyendaY - 1);
+                    objLienzo.DrawString(cadUltB, fntEjes, brsBernstein, arrPuntosBernstein[entUltimo].X - objTamB.Width - 6, Math.Max(entMargenSup + 2, entPosYB));
+                    objLienzo.DrawString(cadUltC, fntEjes, brsCasteljau, arrPuntosCasteljau[entUltimo].X - objTamC.Width - 6, Math.Max(entMargenSup + 2, entPosYC));
+                }
+
+                // Etiqueta centrada del eje X
+                SizeF objTamEjeX = objLienzo.MeasureString(cadEjeX, fntEtiquetaEje);
+                objLienzo.DrawString(cadEjeX, fntEtiquetaEje, brsSecundario, entOrigenX + (entAnchoGrafico - objTamEjeX.Width) / 2F, objArea.Height - 22);
+
+                // Caja de leyenda interna diferenciada por forma y color
+                int entLeyendaX = entOrigenX + 10;
+                int entLeyendaY = entMargenSup + 8;
+                Rectangle objCajaLeyenda = new Rectangle(entLeyendaX, entLeyendaY, 214, 24);
+                using (Brush brsCajaLey = new SolidBrush(Color.FromArgb(242, 255, 255, 255)))
+                using (Pen penCajaLey = new Pen(clsTemaUI.ColBordeSutil, 1F))
+                {
+                    objLienzo.FillRectangle(brsCajaLey, objCajaLeyenda);
+                    objLienzo.DrawRectangle(penCajaLey, objCajaLeyenda);
+                }
+
+                objLienzo.DrawLine(penBernstein, entLeyendaX + 8, entLeyendaY + 12, entLeyendaX + 24, entLeyendaY + 12);
+                objLienzo.FillEllipse(brsBernstein, entLeyendaX + 13, entLeyendaY + 9, 6, 6);
+                objLienzo.DrawString("Bernstein", clsTemaUI.FntEtiquetaPequeNegrita, brsBernstein, entLeyendaX + 29, entLeyendaY + 4);
+
+                int entLeyCX = entLeyendaX + 104;
+                objLienzo.DrawLine(penCasteljau, entLeyCX, entLeyendaY + 12, entLeyCX + 16, entLeyendaY + 12);
+                Point[] arrMiniRombo = new Point[]
+                {
+                    new Point(entLeyCX + 8, entLeyendaY + 8),
+                    new Point(entLeyCX + 12, entLeyendaY + 12),
+                    new Point(entLeyCX + 8, entLeyendaY + 16),
+                    new Point(entLeyCX + 4, entLeyendaY + 12)
+                };
+                objLienzo.FillPolygon(brsCasteljau, arrMiniRombo);
+                objLienzo.DrawString("De Casteljau", clsTemaUI.FntEtiquetaPequeNegrita, brsCasteljau, entLeyCX + 21, entLeyendaY + 4);
             }
         }
     }
