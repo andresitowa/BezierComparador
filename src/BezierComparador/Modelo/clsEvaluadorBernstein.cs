@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace BezierComparador
 {
-    // Evalua la curva de Bezier usando polinomios de Bernstein
+    // Evalua la curva de Bezier en forma directa con polinomios de Bernstein
+    // Complejidad: O(n) por muestra, O(N * n) para N muestras
     public class clsEvaluadorBernstein : IEvaluadorCurva
     {
         public string CadNombre
@@ -14,56 +14,45 @@ namespace BezierComparador
 
         // Formula: B(t) = suma para i=0..n de C(n,i) * (1-t)^(n-i) * t^i * P_i
         // Parametro: dblT = k / (entMuestras - 1), con k de 0 a entMuestras - 1
+        // Los coeficientes C(n,i) se calculan una sola vez, fuera del ciclo de muestras
         public clsResultadoEvaluacion Evaluar(List<clsPuntoControl> lstPuntos, int entMuestras)
         {
-            clsResultadoEvaluacion objResultado = new clsResultadoEvaluacion();
-            objResultado.cadNombreMetodo = CadNombre;
+            clsResultadoEvaluacion objResultado = new clsResultadoEvaluacion(CadNombre);
 
-            if (lstPuntos == null || lstPuntos.Count < 2 || entMuestras < 2)
+            // Valida minimo 2 puntos de control y 2 muestras
+            if (lstPuntos == null || lstPuntos.Count < clsCurvaBezier.entMinimoPuntos || entMuestras < 2)
             {
-                objResultado.arrPuntosCurva = new clsPuntoControl[0];
                 return objResultado;
             }
-
-            Stopwatch objReloj = Stopwatch.StartNew();
 
             int entN = lstPuntos.Count - 1;
             double[] arrCoeficientes = CalcularCoeficientesBinomiales(entN);
             clsPuntoControl[] arrCurva = new clsPuntoControl[entMuestras];
 
-            // Recorre todas las muestras del parametro t entre 0 y 1
+            // Recorre cada muestra del parametro t entre 0 y 1
             for (int entK = 0; entK < entMuestras; entK++)
             {
                 double dblT = (double)entK / (double)(entMuestras - 1);
-                double dblUnoMenosT = 1.0 - dblT;
                 double dblSumaX = 0.0;
                 double dblSumaY = 0.0;
 
-                // Evalua la combinacion lineal con los polinomios base de Bernstein
+                // Suma ponderada de los puntos de control: n + 1 terminos, O(n)
                 for (int entI = 0; entI <= entN; entI++)
                 {
-                    double dblPotenciaUnoMenosT = Math.Pow(dblUnoMenosT, entN - entI);
-                    double dblPotenciaT = Math.Pow(dblT, entI);
-                    double dblBaseBernstein = arrCoeficientes[entI] * dblPotenciaUnoMenosT * dblPotenciaT;
-
-                    dblSumaX += dblBaseBernstein * lstPuntos[entI].dblX;
-                    dblSumaY += dblBaseBernstein * lstPuntos[entI].dblY;
+                    double dblBase = CalcularBase(arrCoeficientes[entI], entN, entI, dblT);
+                    dblSumaX += dblBase * lstPuntos[entI].dblX;
+                    dblSumaY += dblBase * lstPuntos[entI].dblY;
                 }
 
                 arrCurva[entK] = new clsPuntoControl(dblSumaX, dblSumaY);
             }
 
-            objReloj.Stop();
-            double dblMs = objReloj.Elapsed.TotalMilliseconds;
-
             objResultado.arrPuntosCurva = arrCurva;
-            objResultado.dblTiempoPromedioMs = dblMs;
-            objResultado.dblTiempoMinimoMs = dblMs;
-            objResultado.dblTiempoMaximoMs = dblMs;
             return objResultado;
         }
 
-        // Formula: C(n,i) = C(n, i-1) * (n - i + 1) / i (iterativo sin factorial)
+        // Formula: C(n,0) = 1 y C(n,i) = C(n,i-1) * (n - i + 1) / i
+        // Iterativo sin factorial para evitar desbordamiento, O(n)
         public double[] CalcularCoeficientesBinomiales(int entN)
         {
             double[] arrCoef = new double[entN + 1];
@@ -75,6 +64,25 @@ namespace BezierComparador
             }
 
             return arrCoef;
+        }
+
+        // Formula: B_{i,n}(t) = C(n,i) * (1-t)^(n-i) * t^i
+        public double CalcularBase(double dblCoeficiente, int entN, int entI, double dblT)
+        {
+            double dblPotenciaUnoMenosT = ElevarPotencia(1.0 - dblT, entN - entI);
+            double dblPotenciaT = ElevarPotencia(dblT, entI);
+            return dblCoeficiente * dblPotenciaUnoMenosT * dblPotenciaT;
+        }
+
+        // Calcula base^exponente con Math.Pow, tomando 0^0 = 1
+        // Asi en t = 0 y t = 1 la curva pasa exacto por P_0 y P_n
+        private double ElevarPotencia(double dblBase, int entExponente)
+        {
+            if (entExponente == 0)
+            {
+                return 1.0;
+            }
+            return Math.Pow(dblBase, entExponente);
         }
     }
 }

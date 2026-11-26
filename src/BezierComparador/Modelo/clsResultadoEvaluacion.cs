@@ -1,6 +1,7 @@
 namespace BezierComparador
 {
     // Guarda los puntos calculados y las metricas de tiempo de una evaluacion
+    // Los tiempos los llena clsMedidor; el evaluador solo llena los puntos
     public class clsResultadoEvaluacion
     {
         public string cadNombreMetodo;
@@ -46,6 +47,7 @@ namespace BezierComparador
             set { dblDesviacionEstandarMs = value; }
         }
 
+        // Crea un resultado vacio
         public clsResultadoEvaluacion()
         {
             cadNombreMetodo = "";
@@ -54,6 +56,18 @@ namespace BezierComparador
             dblTiempoMinimoMs = 0.0;
             dblTiempoMaximoMs = 0.0;
             dblDesviacionEstandarMs = 0.0;
+        }
+
+        // Crea un resultado vacio con el nombre del metodo
+        public clsResultadoEvaluacion(string cadNombre) : this()
+        {
+            cadNombreMetodo = cadNombre;
+        }
+
+        // Indica si la evaluacion produjo puntos
+        public bool TienePuntos()
+        {
+            return arrPuntosCurva != null && arrPuntosCurva.Length > 0;
         }
     }
 }

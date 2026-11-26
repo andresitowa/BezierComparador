@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace BezierComparador
 {
-    // Evalua la curva de Bezier mediante interpolaciones sucesivas de De Casteljau
+    // Evalua la curva de Bezier con interpolaciones lineales sucesivas (De Casteljau)
+    // Complejidad: O(n^2) por muestra, O(N * n^2) para N muestras
     public class clsEvaluadorDeCasteljau : IEvaluadorCurva
     {
         public string CadNombre
@@ -11,97 +11,103 @@ namespace BezierComparador
             get { return "De Casteljau"; }
         }
 
-        // Formula: P_i^(r) = (1 - t) * P_i^(r-1) + t * P_(i+1)^(r-1)
-        // r de 1..n, i de 0..n-r. Parametro: dblT = k / (entMuestras - 1)
+        // Formula: P_i^(r) = (1-t) * P_i^(r-1) + t * P_(i+1)^(r-1)
+        // r de 1..n, i de 0..n-r. El punto de la curva es P_0^(n)
+        // Parametro: dblT = k / (entMuestras - 1), con k de 0 a entMuestras - 1
         public clsResultadoEvaluacion Evaluar(List<clsPuntoControl> lstPuntos, int entMuestras)
         {
-            clsResultadoEvaluacion objResultado = new clsResultadoEvaluacion();
-            objResultado.cadNombreMetodo = CadNombre;
+            clsResultadoEvaluacion objResultado = new clsResultadoEvaluacion(CadNombre);
 
-            if (lstPuntos == null || lstPuntos.Count < 2 || entMuestras < 2)
+            // Valida minimo 2 puntos de control y 2 muestras
+            if (lstPuntos == null || lstPuntos.Count < clsCurvaBezier.entMinimoPuntos || entMuestras < 2)
             {
-                objResultado.arrPuntosCurva = new clsPuntoControl[0];
                 return objResultado;
             }
 
-            Stopwatch objReloj = Stopwatch.StartNew();
-
-            int entCantidad = lstPuntos.Count;
-            int entGrado = entCantidad - 1;
+            int entN = lstPuntos.Count - 1;
             clsPuntoControl[] arrCurva = new clsPuntoControl[entMuestras];
-            double[] arrTrabajoX = new double[entCantidad];
-            double[] arrTrabajoY = new double[entCantidad];
 
-            // Evalua cada muestra del parametro t
+            // Arreglos de trabajo para la copia de X y Y (se reservan una sola vez)
+            double[] arrX = new double[entN + 1];
+            double[] arrY = new double[entN + 1];
+
+            // Recorre cada muestra del parametro t entre 0 y 1
             for (int entK = 0; entK < entMuestras; entK++)
             {
                 double dblT = (double)entK / (double)(entMuestras - 1);
                 double dblUnoMenosT = 1.0 - dblT;
 
-                // Copia los puntos de control iniciales para el nivel r = 0
-                for (int entI = 0; entI < entCantidad; entI++)
+                // Copia los puntos de control (nivel r = 0) para no alterar la lista original
+                for (int entI = 0; entI <= entN; entI++)
                 {
-                    arrTrabajoX[entI] = lstPuntos[entI].dblX;
-                    arrTrabajoY[entI] = lstPuntos[entI].dblY;
+                    arrX[entI] = lstPuntos[entI].dblX;
+                    arrY[entI] = lstPuntos[entI].dblY;
                 }
 
-                // Interpolacion lineal recursiva por niveles r = 1..n
-                for (int entR = 1; entR <= entGrado; entR++)
+                // Reduce por niveles: cada nivel tiene un punto menos, n(n+1)/2 operaciones
+                for (int entR = 1; entR <= entN; entR++)
                 {
-                    int entLimite = entGrado - entR;
-                    for (int entI = 0; entI <= entLimite; entI++)
+                    for (int entI = 0; entI <= entN - entR; entI++)
                     {
-                        arrTrabajoX[entI] = dblUnoMenosT * arrTrabajoX[entI] + dblT * arrTrabajoX[entI + 1];
-                        arrTrabajoY[entI] = dblUnoMenosT * arrTrabajoY[entI] + dblT * arrTrabajoY[entI + 1];
+                        arrX[entI] = dblUnoMenosT * arrX[entI] + dblT * arrX[entI + 1];
+                        arrY[entI] = dblUnoMenosT * arrY[entI] + dblT * arrY[entI + 1];
                     }
                 }
 
-                arrCurva[entK] = new clsPuntoControl(arrTrabajoX[0], arrTrabajoY[0]);
+                // Al final del ultimo nivel queda P_0^(n), el punto de la curva
+                arrCurva[entK] = new clsPuntoControl(arrX[0], arrY[0]);
             }
 
-            objReloj.Stop();
-            double dblMs = objReloj.Elapsed.TotalMilliseconds;
-
             objResultado.arrPuntosCurva = arrCurva;
-            objResultado.dblTiempoPromedioMs = dblMs;
-            objResultado.dblTiempoMinimoMs = dblMs;
-            objResultado.dblTiempoMaximoMs = dblMs;
             return objResultado;
         }
 
-        // Formula: P_i^(r) = (1 - t) * P_i^(r-1) + t * P_(i+1)^(r-1) para un t fijo
+        // Formula: P_i^(r) = (1-t) * P_i^(r-1) + t * P_(i+1)^(r-1) para un t fijo
+        // Devuelve todos los niveles: nivel 0 = puntos de control, nivel n = punto de la curva
+        // Se usa para dibujar las interpolaciones (no para medir tiempos)
         public List<List<clsPuntoControl>> ObtenerNivelesIntermedios(List<clsPuntoControl> lstPuntos, double dblT)
         {
             List<List<clsPuntoControl>> lstNiveles = new List<List<clsPuntoControl>>();
 
-            if (lstPuntos == null || lstPuntos.Count < 2)
+            if (lstPuntos == null || lstPuntos.Count < clsCurvaBezier.entMinimoPuntos)
             {
                 return lstNiveles;
             }
 
+            // Mantiene t dentro del intervalo [0, 1]
+            if (dblT < 0.0)
+            {
+                dblT = 0.0;
+            }
+            if (dblT > 1.0)
+            {
+                dblT = 1.0;
+            }
             double dblUnoMenosT = 1.0 - dblT;
-            List<clsPuntoControl> lstNivelActual = new List<clsPuntoControl>();
 
+            // Nivel 0: copia de los puntos de control
+            List<clsPuntoControl> lstNivelCero = new List<clsPuntoControl>();
             for (int entI = 0; entI < lstPuntos.Count; entI++)
             {
-                lstNivelActual.Add(new clsPuntoControl(lstPuntos[entI].dblX, lstPuntos[entI].dblY));
+                lstNivelCero.Add(lstPuntos[entI].Clonar());
             }
-            lstNiveles.Add(lstNivelActual);
+            lstNiveles.Add(lstNivelCero);
 
-            int entGrado = lstPuntos.Count - 1;
-            for (int entR = 1; entR <= entGrado; entR++)
+            // Niveles 1..n: interpola cada par de puntos consecutivos del nivel anterior
+            int entN = lstPuntos.Count - 1;
+            for (int entR = 1; entR <= entN; entR++)
             {
                 List<clsPuntoControl> lstAnterior = lstNiveles[entR - 1];
-                List<clsPuntoControl> lstNuevoNivel = new List<clsPuntoControl>();
+                List<clsPuntoControl> lstNuevo = new List<clsPuntoControl>();
 
-                for (int entI = 0; entI < lstAnterior.Count - 1; entI++)
+                for (int entI = 0; entI <= entN - entR; entI++)
                 {
                     double dblX = dblUnoMenosT * lstAnterior[entI].dblX + dblT * lstAnterior[entI + 1].dblX;
                     double dblY = dblUnoMenosT * lstAnterior[entI].dblY + dblT * lstAnterior[entI + 1].dblY;
-                    lstNuevoNivel.Add(new clsPuntoControl(dblX, dblY));
+                    lstNuevo.Add(new clsPuntoControl(dblX, dblY));
                 }
 
-                lstNiveles.Add(lstNuevoNivel);
+                lstNiveles.Add(lstNuevo);
             }
 
             return lstNiveles;
