@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Consola de validacion manual: usa las clases del Modelo del proyecto principal -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>BezierComparador</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\BezierComparador\Modelo\*.cs" Link="Modelo\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
