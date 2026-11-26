@@ -20,7 +20,7 @@ Lenguaje C\# & Lenguaje orientado a objetos con tipado fuerte y soporte nativo p
 \midrule
 Windows Forms & Framework de interfaz grafica que proporciona acceso directo al objeto \texttt{Graphics} de GDI+ para el dibujo personalizado con \texttt{DrawLine}, \texttt{FillEllipse} y \texttt{DrawString}, sin depender de funciones predefinidas de curvas. \\
 \midrule
-.NET 8.0 & Plataforma de ejecucion con compilacion JIT optimizada, recoleccion de basura generacional y soporte para \texttt{async/await} en la ejecucion paralela de los experimentos sin bloquear la interfaz grafica. \\
+.NET 8.0 / 10.0 & Plataforma de ejecucion con deteccion automatica del SDK instalado (\texttt{net8.0-windows} a \texttt{net10.0-windows}), compilacion JIT optimizada y soporte para \texttt{async/await} en la ejecucion de experimentos sin bloquear la interfaz grafica. \\
 \midrule
 \texttt{System.Diagnostics.Stopwatch} & Temporizador de alta resolucion basado en el contador de rendimiento del hardware del procesador (QPC), con precision de microsegundos, utilizado para medir exclusivamente el tiempo del calculo matematico. \\
 \bottomrule
@@ -55,13 +55,17 @@ El sistema se estructura siguiendo el patron de diseno \textbf{Modelo--Vista--Co
 \node[clase] (rescomp) at (11, -4.4) {clsResultadoComparacion};
 
 % --- CAPA CONTROLADOR ---
+\node[clase, fill=orange!8] (ctrlcurva) at (-2.5, -8.8) {clsControladorCurva};
 \node[clase, fill=orange!8] (controlador) at (5.8, -6.6) {clsControladorPruebas};
 \node[clase, fill=orange!8] (filaprueba) at (11, -6.6) {clsFilaPrueba};
 \node[clase, fill=orange!8] (filaestab) at (11, -8.8) {clsFilaEstabilidad};
 
 % --- CAPA VISTA ---
-\node[clase, fill=yellow!10] (frmpruebas) at (5.8, -8.8) {frmPruebas};
-\node[clase, fill=yellow!10] (pnldoble) at (0, -8.8) {pnlGraficoDobleBuffer};
+\node[clase, fill=yellow!10] (frmprincipal) at (-2.5, -11.2) {frmPrincipal};
+\node[clase, fill=yellow!10] (ctllienzo) at (-7.6, -11.2) {ctlLienzo};
+\node[clase, fill=yellow!10] (clstema) at (2.2, -11.2) {clsTemaUI / pnlTarjetaUI};
+\node[clase, fill=yellow!10] (frmpruebas) at (7.0, -11.2) {frmPruebas};
+\node[clase, fill=yellow!10] (pnldoble) at (11.8, -11.2) {pnlGraficoDobleBuffer};
 
 % --- RELACIONES ---
 \draw[flecha] (curvabezier) -- node[etiqueta, above] {contiene} (puntocontrol);
@@ -72,17 +76,26 @@ El sistema se estructura siguiendo el patron de diseno \textbf{Modelo--Vista--Co
 \draw[usa] (medidor) -- (ievaluador);
 \draw[usa] (medidor) -- (resultado);
 \draw[usa] (comparador) -- (rescomp);
+\draw[usa] (ctrlcurva) -- (curvabezier);
+\draw[usa] (ctrlcurva) -- (bernstein);
+\draw[usa] (ctrlcurva) -- (casteljau);
+\draw[usa] (ctrlcurva) -- (medidor);
 \draw[usa] (controlador) -- (medidor);
 \draw[usa] (controlador) -- (comparador);
 \draw[usa] (controlador) -- (filaprueba);
 \draw[usa] (controlador) -- (filaestab);
+\draw[flecha] (frmprincipal) -- node[etiqueta, right] {delega} (ctrlcurva);
+\draw[flecha] (frmprincipal) -- (ctllienzo);
+\draw[usa] (frmprincipal) -- (clstema);
+\draw[usa] (frmprincipal) -- (frmpruebas);
 \draw[flecha] (frmpruebas) -- node[etiqueta, right] {delega} (controlador);
 \draw[flecha] (frmpruebas) -- (pnldoble);
+\draw[usa] (frmpruebas) -- (clstema);
 
 % --- ETIQUETAS DE CAPA ---
-\node[font=\small\bfseries\sffamily, text=blue!70] at (-4.5, 0.8) {MODELO};
-\node[font=\small\bfseries\sffamily, text=orange!70] at (-4.5, -6.6) {CONTROLADOR};
-\node[font=\small\bfseries\sffamily, text=yellow!50!black] at (-4.5, -8.8) {VISTA};
+\node[font=\small\bfseries\sffamily, text=blue!70] at (-7.6, 0.8) {MODELO};
+\node[font=\small\bfseries\sffamily, text=orange!70] at (-7.6, -8.8) {CONTROLADOR};
+\node[font=\small\bfseries\sffamily, text=yellow!50!black] at (-7.6, -12.4) {VISTA};
 \end{tikzpicture}
 }%
 \caption{Diagrama de clases del sistema BezierComparador organizado por capas MVC. Las flechas continuas representan composicion, las discontinuas implementacion de interfaz y las punteadas relaciones de uso.}
@@ -120,15 +133,23 @@ En el Cuadro~\ref{tab:impl_clases} se detallan las clases del sistema, su capa M
 \midrule
 \texttt{clsResultadoComparacion} & Modelo & Estructura de datos que almacena las tres metricas de diferencia numerica entre dos curvas. \\
 \midrule
+\texttt{clsControladorCurva} & Controlador & Conecta la ventana principal con el Modelo para agregar, mover, buscar y eliminar puntos de control, evaluar ambas curvas en tiempo real, obtener subdivisiones de De Casteljau y ejecutar mediciones con \texttt{Stopwatch}. \\
+\midrule
 \texttt{clsControladorPruebas} & Controlador & Coordina la ejecucion de los $24$ casos experimentales, genera puntos aleatorios reproducibles con semilla fija, ejecuta la prueba de estabilidad contra referencia \texttt{decimal} de 128 bits y exporta los resultados a CSV. \\
 \midrule
 \texttt{clsFilaPrueba} & Controlador & Almacena los datos de una fila de resultados: grado, muestras, tiempos de ambos metodos, errores y metodo mas rapido. \\
 \midrule
 \texttt{clsFilaEstabilidad} & Controlador & Almacena los datos de estabilidad numerica en grados altos: errores de cada metodo frente a la referencia decimal y metodo mas estable. \\
 \midrule
-\texttt{frmPruebas} & Vista & Ventana principal de experimentacion que contiene la tabla de resultados (\texttt{DataGridView}), los botones de ejecucion, estabilidad y exportacion, la barra de progreso y los paneles de graficos comparativos. \\
+\texttt{frmPrincipal} & Vista & Ventana principal interactiva con cabecera de estado, lienzo de trazado (\texttt{ctlLienzo}) y panel lateral de tres tarjetas para puntos de control, configuracion de capas/parametro $t$ y metricas en vivo. \\
 \midrule
-\texttt{pnlGraficoDobleBuffer} & Vista & Panel heredado de \texttt{Panel} con \texttt{DoubleBuffered = true} para evitar parpadeo (flicker) durante el redibujado de los graficos. \\
+\texttt{ctlLienzo} & Vista & Control personalizado con doble buffer que dibuja cuadricula CAD, poligono de control, niveles de De Casteljau y ambas curvas empleando exclusivamente \texttt{DrawLine}, \texttt{FillEllipse} y \texttt{DrawString}. \\
+\midrule
+\texttt{clsTemaUI} / \texttt{pnlTarjetaUI} & Vista & Sistema de diseno centralizado con tokens de color WCAG AA/AAA, tipografia tabular, estados de foco/hover/deshabilitado y paneles tipo tarjeta con doble buffer. \\
+\midrule
+\texttt{frmPruebas} & Vista & Ventana del laboratorio de pruebas con \texttt{TabControl} en dos pestanas: tabla comparativa de resultados (\texttt{DataGridView}) con resumen de estabilidad, y graficos comparativos exportables a PNG. \\
+\midrule
+\texttt{pnlGraficoDobleBuffer} & Vista & Panel heredado de \texttt{Panel} con \texttt{DoubleBuffered = true} para evitar parpadeo (\textit{flicker}) durante el redibujado de los graficos. \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -154,18 +175,21 @@ Todas las variables, campos, metodos y clases del proyecto siguen la \textbf{not
 \texttt{lst} & \texttt{List<>} (lista generica) & \texttt{lstPuntosControl}, \texttt{lstResultados} \\
 \texttt{arr} & arreglo (\texttt{[]}) & \texttt{arrCoeficientes}, \texttt{arrTiemposMs}, \texttt{arrCurva} \\
 \texttt{cls} & clase & \texttt{clsPuntoControl}, \texttt{clsMedidor}, \texttt{clsCurvaBezier} \\
-\texttt{frm} & formulario (ventana) & \texttt{frmPruebas} \\
-\texttt{btn} & boton & \texttt{btnEjecutar}, \texttt{btnEstabilidad}, \texttt{btnExportarCsv} \\
-\texttt{lbl} & etiqueta & \texttt{lblEstado}, \texttt{lblRepeticiones} \\
+\texttt{frm} & formulario (ventana) & \texttt{frmPrincipal}, \texttt{frmPruebas} \\
+\texttt{ctl} & control personalizado & \texttt{ctlLienzo} \\
+\texttt{btn} & boton & \texttt{btnMedir}, \texttt{btnEjecutar}, \texttt{btnExportarCsv} \\
+\texttt{chk} & casilla de verificacion & \texttt{chkBernstein}, \texttt{chkCasteljau}, \texttt{chkInterpolaciones} \\
+\texttt{trk} & control deslizante (\texttt{TrackBar}) & \texttt{trkParametroT} \\
+\texttt{lbl} & etiqueta & \texttt{lblEstado}, \texttt{lblGradoActual}, \texttt{lblRepeticiones} \\
 \texttt{dgv} & \texttt{DataGridView} & \texttt{dgvResultados} \\
-\texttt{pnl} & panel & \texttt{pnlGraficoMuestras}, \texttt{pnlSuperior} \\
-\texttt{num} & \texttt{NumericUpDown} & \texttt{numRepeticiones} \\
+\texttt{pnl} & panel & \texttt{pnlTarjetaUI}, \texttt{pnlGraficoMuestras}, \texttt{pnlSuperior} \\
+\texttt{tab} & pestana / \texttt{TabControl} & \texttt{tabContenedor}, \texttt{tabTablaResultados} \\
+\texttt{flw} & \texttt{FlowLayoutPanel} & \texttt{flwAcciones}, \texttt{flwFiltros} \\
+\texttt{num} & \texttt{NumericUpDown} & \texttt{numMuestras}, \texttt{numRepeticiones} \\
 \texttt{cmb} & \texttt{ComboBox} & \texttt{cmbGradoFijo}, \texttt{cmbMuestrasFijas} \\
-\texttt{grp} & \texttt{GroupBox} & \texttt{grpConfiguracion}, \texttt{grpResultados} \\
 \texttt{prg} & \texttt{ProgressBar} & \texttt{prgProgreso} \\
 \texttt{tip} & \texttt{ToolTip} & \texttt{tipAyuda} \\
-\texttt{spl} & \texttt{SplitContainer} & \texttt{splContenedor} \\
-\texttt{tbl} & \texttt{TableLayoutPanel} & \texttt{tblGraficos} \\
+\texttt{tbl} & \texttt{TableLayoutPanel} & \texttt{tblInspector}, \texttt{tblGraficos} \\
 \texttt{dlg} & dialogo de archivo & \texttt{dlgGuardar}, \texttt{dlgCarpeta} \\
 \texttt{col} & color & \texttt{colVerdeGanador} \\
 \texttt{dec} & \texttt{decimal} (128 bits) & \texttt{decT}, \texttt{decUnoMenosT} \\
