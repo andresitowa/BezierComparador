@@ -204,17 +204,27 @@ Todas las variables, campos, metodos y clases del proyecto siguen la \textbf{not
 \subsection{Manual de Usuario}
 \label{subsec:impl_manual}
 
-La aplicacion \textit{BezierComparador} se ejecuta desde la ventana principal \texttt{frmPruebas}, que constituye el punto de entrada del programa. A continuacion se describen las operaciones disponibles para el usuario.
+La aplicacion \textit{BezierComparador} inicia en la ventana interactiva \texttt{frmPrincipal}, desde la cual el usuario manipula curvas de Bezier en tiempo real y accede al Laboratorio de Pruebas (\texttt{frmPruebas}). A continuacion se describen las operaciones disponibles.
 
-\subsubsection{Ventana Principal: Laboratorio de Pruebas}
+\subsubsection{Ventana Principal Interactiva (\texttt{frmPrincipal})}
 \label{subsubsec:impl_ventana_principal}
 
-La ventana principal se divide en tres regiones claramente diferenciadas, como se ilustra en la Figura~\ref{fig:impl_ventana_principal}:
+La ventana principal se organiza en tres areas principales, como se aprecia en la Figura~\ref{fig:impl_ventana_principal}:
 
 \begin{enumerate}
-    \item \textbf{Panel superior de configuracion:} Contiene el selector de repeticiones (\texttt{numRepeticiones}, minimo 10), el boton \textit{Ejecutar pruebas} (azul), el boton \textit{Estabilidad (n=50, 100)} (verde), los botones de exportacion \textit{Exportar CSV} y \textit{Guardar PNG}, la barra de progreso y la etiqueta de estado.
-    \item \textbf{Tabla de resultados:} Un \texttt{DataGridView} de solo lectura con nueve columnas: Grado ($n$), Muestras ($N$), Bernstein Prom (ms), Bernstein Desv (ms), De Casteljau Prom (ms), De Casteljau Desv (ms), Error Maximo, Error Promedio y Metodo Mas Rapido. Las celdas del metodo ganador se resaltan en verde claro.
-    \item \textbf{Panel de graficos comparativos:} Dos paneles con doble buffer que muestran los graficos de \textit{Tiempo vs Muestras} (grado fijo) y \textit{Tiempo vs Grado} (muestras fijas), con filtros \texttt{ComboBox} para seleccionar los valores fijos. La leyenda identifica la serie azul como Bernstein y la naranja como De Casteljau.
+    \item \textbf{Cabecera superior:} Presenta el titulo de la aplicacion y dos insignias en tiempo real: las coordenadas $(X, Y)$ del cursor sobre el lienzo y el grado actual $n$ junto con la cantidad de puntos de control.
+    \item \textbf{Lienzo cartesiano interactivo (\texttt{ctlLienzo}):} Ocupa el area izquierda con cuadricula CAD (lineas menores cada $25\text{ px}$ y mayores cada $100\text{ px}$), leyenda flotante de capas y barra de estado inferior. El usuario puede:
+    \begin{itemize}
+        \item \textbf{Agregar puntos:} Hacer clic izquierdo en un area libre del lienzo.
+        \item \textbf{Mover puntos:} Hacer clic izquierdo y arrastrar cualquier punto de control $P_i$ para deformar la curva en tiempo real (las metricas con \texttt{Stopwatch} se recalculan automaticamente al soltar).
+        \item \textbf{Eliminar puntos:} Hacer clic derecho sobre un punto de control existente.
+    \end{itemize}
+    \item \textbf{Panel lateral de tres tarjetas:} Organizado verticalmente con desplazamiento automatico (\texttt{AutoScroll}) para mantener la responsividad en resoluciones compactas:
+    \begin{itemize}
+        \item \textit{Puntos de control:} Lista monoespaciada de coordenadas $P_i = (x, y)$, boton \textit{Cargar curva grado 3} y boton \textit{Limpiar lienzo}.
+        \item \textit{Configuracion y capas:} Selector numerico de muestras $N$ (\texttt{numMuestras}), casillas de visibilidad por capa (Bernstein, De Casteljau, interpolaciones y poligono de control) y deslizador (\texttt{trkParametroT}) con escala de $0.00$ a $1.00$ para el parametro $t$.
+        \item \textit{Metricas de la curva actual:} Tiempos promedio de ambos metodos (10 repeticiones con calentamiento), diferencia maxima, diferencia promedio, ECM, boton \textit{Medir curva actual} y boton verde \textit{Abrir Laboratorio y Graficos Comparativos}.
+    \end{itemize}
 \end{enumerate}
 
 \begin{figure}[H]
@@ -281,28 +291,27 @@ La aplicacion ofrece dos mecanismos de exportacion orientados a la generacion de
 \subsection{Decisiones de Diseno UI/UX}
 \label{subsec:impl_uiux}
 
-El diseno visual de la interfaz se guio por los siguientes principios de usabilidad y consistencia:
+El diseno visual y de experiencia de usuario se centralizo en la clase \texttt{clsTemaUI} siguiendo criterios de contraste accesible WCAG AA/AAA, jerarquia visual limpia y consistencia tipografica:
 
 \begin{enumerate}
-    \item \textbf{Paleta de colores con significado funcional:}
+    \item \textbf{Sistema de tokens de color con significado funcional y contraste WCAG:}
     \begin{itemize}
-        \item \textbf{Azul} (\texttt{RGB(0, 102, 204)}): Identifica visualmente al metodo de polinomios de Bernstein en botones, graficos y leyendas.
-        \item \textbf{Naranja} (\texttt{RGB(230, 115, 0)}): Identifica al algoritmo de De Casteljau.
-        \item \textbf{Verde claro} (\texttt{RGB(200, 242, 205)}): Resalta el metodo ganador (mas rapido) en cada fila de la tabla de resultados.
-        \item \textbf{Verde oscuro} (\texttt{RGB(40, 140, 70)}): Color del boton de estabilidad numerica, diferenciandolo del boton de ejecucion.
-        \item \textbf{Fondo gris claro} (\texttt{RGB(245, 245, 245)}): Fondo general de la ventana para reducir la fatiga visual.
-        \item \textbf{Fondo blanco}: Paneles de graficos, tabla de resultados y panel de configuracion.
+        \item \textbf{Azul cobalto} (\texttt{\#1E40AF}, contraste $8.59:1$ sobre blanco): Identifica al metodo de polinomios de Bernstein en curvas, botones primarios, pestanas activas y graficos.
+        \item \textbf{Naranja quemado} (\texttt{\#C2410C} en texto con contraste $5.18:1$; \texttt{\#EA580C} en trazos): Identifica al algoritmo de De Casteljau.
+        \item \textbf{Verde esmeralda} (\texttt{\#047857} en acciones e interpolaciones; fondo \texttt{\#DCFCE7} con texto \texttt{\#14532D} de contraste $8.77:1$): Resalta el metodo mas rapido en la tabla de resultados, el banner de estabilidad numerica y los niveles de subdivision de De Casteljau.
+        \item \textbf{Rojo carmesi} (\texttt{\#DC2626}): Representa los puntos de control $P_i$ y la accion de limpieza del lienzo.
+        \item \textbf{Superficies Slate neutras:} Fondo general \texttt{\#F8FAFC}, tarjetas \texttt{\#FFFFFF} con bordes \texttt{\#CBD5E1} y tipografia principal \texttt{\#0F172A} (contraste $17.9:1$).
     \end{itemize}
 
-    \item \textbf{Distribucion espacial con SplitContainer:} La ventana utiliza un \texttt{SplitContainer} horizontal con la tabla en el panel superior y los graficos en el inferior, permitiendo al usuario redimensionar ambas secciones segun su preferencia. El tamano minimo de la ventana es de $1020 \times 660$ pixeles.
+    \item \textbf{Tipografia tecnica y numeros tabulares:} Se combino \texttt{Segoe UI} para encabezados, etiquetas y controles con \texttt{Consolas} monoespaciada para coordenadas, tiempos en milisegundos y errores en notacion cientifica, evitando saltos horizontales al actualizar metricas en tiempo real.
 
-    \item \textbf{Tooltips informativos:} Cada control interactivo posee un \texttt{ToolTip} explicativo que describe su funcion al posicionar el cursor sobre el, facilitando el uso sin necesidad de un manual externo. Ejemplos: ``\textit{Cantidad de repeticiones por prueba (con calentamiento previo)}'' sobre \texttt{numRepeticiones} y ``\textit{Ejecuta los experimentos de rendimiento y actualiza tabla y graficos}'' sobre \texttt{btnEjecutar}.
+    \item \textbf{Distribucion responsiva con tarjetas y \texttt{TabControl}:} En \texttt{frmPrincipal}, el panel derecho utiliza tarjetas \texttt{pnlTarjetaUI} apiladas dentro de un \texttt{TableLayoutPanel} con \texttt{AutoScroll}. En \texttt{frmPruebas}, se adopto un \texttt{TabControl} con pestanas planas personalizadas (\textit{1. Tabla de Resultados} y \textit{2. Graficos Comparativos}) que aprovecha al maximo el espacio vertical para la tabla y los graficos lado a lado.
 
-    \item \textbf{Doble buffer (\textit{double buffering}):} Los paneles de graficos utilizan la clase personalizada \texttt{pnlGraficoDobleBuffer} (heredada de \texttt{Panel}) con la propiedad \texttt{DoubleBuffered = true} y \texttt{ResizeRedraw = true}, eliminando el parpadeo (\textit{flicker}) durante el redibujado y garantizando una experiencia visual fluida al redimensionar la ventana o actualizar los datos.
+    \item \textbf{Accesibilidad, teclado y tooltips:} Todos los controles interactivos definen \texttt{AccessibleName}, \texttt{AccessibleDescription}, orden logico de \texttt{TabIndex}, anillos visibles de foco por teclado (\texttt{\#2563EB}), estados deshabilitados legibles y \texttt{ToolTip} informativos. En el lienzo se muestra retroalimentacion de \textit{hover} y cursor contextual (\texttt{SizeAll} sobre puntos, \texttt{Cross} sobre el plano).
 
-    \item \textbf{Retroalimentacion de progreso:} La barra de progreso (\texttt{prgProgreso}) y la etiqueta de estado (\texttt{lblEstado}) mantienen al usuario informado del avance de la ejecucion experimental, mostrando el grado y la cantidad de muestras que se estan evaluando en cada momento.
+    \item \textbf{Doble buffer (\textit{double buffering}) y renderizado suavizado:} Tanto \texttt{ctlLienzo} como \texttt{pnlGraficoDobleBuffer} y \texttt{pnlTarjetaUI} activan \texttt{DoubleBuffered = true} y \texttt{SmoothingMode.AntiAlias}, eliminando el parpadeo (\textit{flicker}) al arrastrar puntos o redimensionar las ventanas.
 
-    \item \textbf{Graficos exclusivamente con primitivas basicas:} Todos los graficos comparativos se construyen utilizando unicamente \texttt{DrawLine} para los ejes, las guias, las series de datos y las leyendas, \texttt{FillEllipse} para los marcadores circulares y \texttt{DrawString} para las etiquetas. Esta decision refuerza la restriccion pedagogica del proyecto de no emplear funciones predefinidas que generen curvas o graficos automaticamente.
+    \item \textbf{Graficos y curvas exclusivamente con primitivas basicas y doble codificacion:} Las curvas y los graficos comparativos se dibujan unicamente con \texttt{DrawLine}, \texttt{FillEllipse}, \texttt{FillPolygon} y \texttt{DrawString}. Para no depender unicamente del color, Bernstein utiliza linea continua y marcadores circulares, mientras que De Casteljau utiliza trazo discontinuo en el lienzo y marcadores en forma de rombo en los graficos comparativos.
 \end{enumerate}
 
-% RESUMEN: Esta seccion (04_implementacion.tex) contiene las tecnologias (Cuadro tab:impl_tecnologias), el diagrama de clases con TikZ (Figura fig:impl_diagrama_clases), la tabla de clases y responsabilidades (Cuadro tab:impl_clases), la tabla de notacion hungara (Cuadro tab:impl_notacion), el manual de usuario (ejecucion, interpolaciones, estabilidad, exportacion) y las decisiones de diseno UI/UX (colores, SplitContainer, tooltips, doble buffer, graficos con DrawLine). Capturas pendientes: fig:impl_ventana_principal, fig:impl_curva_grado3, fig:impl_interpolaciones, fig:impl_ventana_pruebas. El equipo debe verificar que las etiquetas sec:fundamentos, sec:estado_arte, sec:experimentacion, sec:comparacion y sec:conclusiones existan en las secciones correspondientes.
+% RESUMEN: Esta seccion (04_implementacion.tex) documenta las tecnologias (.NET 8/10, C#, WinForms, Stopwatch), la arquitectura MVC actualizada (diagrama TikZ fig:impl_diagrama_clases, tabla tab:impl_clases y notacion hungara tab:impl_notacion incluyendo frmPrincipal, ctlLienzo, clsControladorCurva y clsTemaUI), el manual de usuario completo con las 4 capturas integradas (impl_ventana_principal.png, impl_curva_grado3.png, impl_interpolaciones.png, impl_ventana_pruebas.png) y las decisiones de diseno UI/UX con tokens WCAG AA/AAA.
