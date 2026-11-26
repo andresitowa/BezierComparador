@@ -18,7 +18,7 @@ namespace BezierComparador
         }
     }
 
-    // Ventana de experimentacion, tabla comparativa, graficos, estabilidad y exportacion
+    // Ventana de experimentacion con pestanas (TabControl) para tabla y graficos comparativos
     public class frmPruebas : Form
     {
         private clsControladorPruebas objControladorPruebas;
@@ -32,7 +32,10 @@ namespace BezierComparador
         private Button btnGuardarPng = null!;
         private ProgressBar prgProgreso = null!;
         private Label lblEstado = null!;
-        private SplitContainer splContenedor = null!;
+        private Panel pnlCuerpo = null!;
+        private TabControl tabContenedor = null!;
+        private TabPage tabTablaResultados = null!;
+        private TabPage tabGraficosComparativos = null!;
         private GroupBox grpResultados = null!;
         private DataGridView dgvResultados = null!;
         private Label lblResumenEstabilidad = null!;
@@ -59,12 +62,12 @@ namespace BezierComparador
             InicializarComponentes();
         }
 
-        // Configura los controles visuales, tabla, botones de exportacion y paneles de graficos
+        // Configura los controles visuales usando un TabControl con dos TabPages (Tabla y Graficos)
         private void InicializarComponentes()
         {
             this.Text = "Laboratorio de Pruebas: Bernstein vs De Casteljau";
-            this.Size = new Size(1240, 800);
-            this.MinimumSize = new Size(1020, 660);
+            this.Size = new Size(1240, 760);
+            this.MinimumSize = new Size(1020, 620);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = Color.FromArgb(245, 245, 245);
             this.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
@@ -160,26 +163,31 @@ namespace BezierComparador
             grpConfiguracion.Controls.Add(lblEstado);
             pnlSuperior.Controls.Add(grpConfiguracion);
 
-            splContenedor = new SplitContainer();
-            splContenedor.Dock = DockStyle.Fill;
-            splContenedor.Orientation = Orientation.Horizontal;
-            splContenedor.Panel1MinSize = 180;
-            splContenedor.Panel2MinSize = 220;
-            splContenedor.Padding = new Padding(12, 6, 12, 12);
+            pnlCuerpo = new Panel();
+            pnlCuerpo.Dock = DockStyle.Fill;
+            pnlCuerpo.Padding = new Padding(12, 8, 12, 12);
 
-            this.Load += (objRemitente, objArgs) =>
-            {
-                splContenedor.SplitterDistance = (this.ClientSize.Height - pnlSuperior.Height) / 2;
-            };
+            tabContenedor = new TabControl();
+            tabContenedor.Dock = DockStyle.Fill;
+            tabContenedor.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular);
 
+            tabTablaResultados = new TabPage("1. Tabla de Resultados");
+            tabTablaResultados.BackColor = Color.FromArgb(245, 245, 245);
+            tabTablaResultados.Padding = new Padding(8);
+
+            tabGraficosComparativos = new TabPage("2. Graficos Comparativos (Tiempo vs Muestras y Grado)");
+            tabGraficosComparativos.BackColor = Color.FromArgb(245, 245, 245);
+            tabGraficosComparativos.Padding = new Padding(8);
+
+            // Pestana 1: Tabla de resultados
             grpResultados = new GroupBox();
-            grpResultados.Text = "Tabla de resultados (en verde el metodo mas rapido por fila)";
+            grpResultados.Text = "Tabla comparativa de tiempos y errores (en verde el metodo mas rapido por fila)";
             grpResultados.Dock = DockStyle.Fill;
             grpResultados.Padding = new Padding(8);
 
             lblResumenEstabilidad = new Label();
             lblResumenEstabilidad.Dock = DockStyle.Bottom;
-            lblResumenEstabilidad.Height = 24;
+            lblResumenEstabilidad.Height = 26;
             lblResumenEstabilidad.Text = "Estabilidad numerica (grados 50 y 100 vs referencia decimal): pendiente de ejecucion.";
             lblResumenEstabilidad.ForeColor = Color.FromArgb(0, 80, 40);
             lblResumenEstabilidad.TextAlign = ContentAlignment.MiddleLeft;
@@ -197,8 +205,9 @@ namespace BezierComparador
 
             grpResultados.Controls.Add(dgvResultados);
             grpResultados.Controls.Add(lblResumenEstabilidad);
-            splContenedor.Panel1.Controls.Add(grpResultados);
+            tabTablaResultados.Controls.Add(grpResultados);
 
+            // Pestana 2: Graficos comparativos propios con DrawLine
             grpGraficos = new GroupBox();
             grpGraficos.Text = "Graficos comparativos propios (dibujados con DrawLine)";
             grpGraficos.Dock = DockStyle.Fill;
@@ -206,17 +215,17 @@ namespace BezierComparador
 
             pnlFiltroGraficos = new Panel();
             pnlFiltroGraficos.Dock = DockStyle.Top;
-            pnlFiltroGraficos.Height = 36;
+            pnlFiltroGraficos.Height = 38;
             pnlFiltroGraficos.BackColor = Color.White;
 
             lblGradoFijo = new Label();
             lblGradoFijo.Text = "Grado para Tiempo vs Muestras:";
-            lblGradoFijo.Location = new Point(10, 9);
+            lblGradoFijo.Location = new Point(10, 10);
             lblGradoFijo.AutoSize = true;
 
             cmbGradoFijo = new ComboBox();
             cmbGradoFijo.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbGradoFijo.Location = new Point(205, 6);
+            cmbGradoFijo.Location = new Point(215, 6);
             cmbGradoFijo.Width = 75;
             int[] arrGrados = objControladorPruebas.ArrGradosPrueba;
             for (int entI = 0; entI < arrGrados.Length; entI++)
@@ -228,12 +237,12 @@ namespace BezierComparador
 
             lblMuestrasFijas = new Label();
             lblMuestrasFijas.Text = "Muestras para Tiempo vs Grado:";
-            lblMuestrasFijas.Location = new Point(305, 9);
+            lblMuestrasFijas.Location = new Point(310, 10);
             lblMuestrasFijas.AutoSize = true;
 
             cmbMuestrasFijas = new ComboBox();
             cmbMuestrasFijas.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbMuestrasFijas.Location = new Point(500, 6);
+            cmbMuestrasFijas.Location = new Point(515, 6);
             cmbMuestrasFijas.Width = 95;
             int[] arrMuestras = objControladorPruebas.ArrMuestrasPrueba;
             for (int entI = 0; entI < arrMuestras.Length; entI++)
@@ -247,14 +256,14 @@ namespace BezierComparador
             lblLeyendaAzul.Text = "[Azul] Polinomios de Bernstein";
             lblLeyendaAzul.ForeColor = Color.FromArgb(0, 102, 204);
             lblLeyendaAzul.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            lblLeyendaAzul.Location = new Point(625, 9);
+            lblLeyendaAzul.Location = new Point(630, 10);
             lblLeyendaAzul.AutoSize = true;
 
             lblLeyendaNaranja = new Label();
             lblLeyendaNaranja.Text = "[Naranja] Algoritmo de De Casteljau";
             lblLeyendaNaranja.ForeColor = Color.FromArgb(230, 115, 0);
             lblLeyendaNaranja.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            lblLeyendaNaranja.Location = new Point(830, 9);
+            lblLeyendaNaranja.Location = new Point(835, 10);
             lblLeyendaNaranja.AutoSize = true;
 
             pnlFiltroGraficos.Controls.Add(lblGradoFijo);
@@ -291,9 +300,13 @@ namespace BezierComparador
 
             grpGraficos.Controls.Add(tblGraficos);
             grpGraficos.Controls.Add(pnlFiltroGraficos);
-            splContenedor.Panel2.Controls.Add(grpGraficos);
+            tabGraficosComparativos.Controls.Add(grpGraficos);
 
-            this.Controls.Add(splContenedor);
+            tabContenedor.TabPages.Add(tabTablaResultados);
+            tabContenedor.TabPages.Add(tabGraficosComparativos);
+            pnlCuerpo.Controls.Add(tabContenedor);
+
+            this.Controls.Add(pnlCuerpo);
             this.Controls.Add(pnlSuperior);
         }
 
@@ -365,7 +378,7 @@ namespace BezierComparador
             pnlGraficoGrados.Invalidate();
 
             prgProgreso.Value = 100;
-            lblEstado.Text = "Estado: Pruebas y analisis de estabilidad completados.";
+            lblEstado.Text = "Estado: Pruebas completadas. Puede cambiar a la pestana '2. Graficos Comparativos'.";
             btnEjecutar.Enabled = true;
             btnEstabilidad.Enabled = true;
             numRepeticiones.Enabled = true;
@@ -463,8 +476,8 @@ namespace BezierComparador
 
                 if (dlgCarpeta.ShowDialog() == DialogResult.OK)
                 {
-                    string cadRutaMuestras = Path.Combine(dlgCarpeta.SelectedPath, "grafico_tiempo_vs_muestras.png");
-                    string cadRutaGrados = Path.Combine(dlgCarpeta.SelectedPath, "grafico_tiempo_vs_grado.png");
+                    string cadRutaMuestras = Path.Combine(dlgCarpeta.SelectedPath, "exp_tiempo_vs_muestras.png");
+                    string cadRutaGrados = Path.Combine(dlgCarpeta.SelectedPath, "exp_tiempo_vs_grado.png");
 
                     GuardarGraficoComoPng(cadRutaMuestras, true);
                     GuardarGraficoComoPng(cadRutaGrados, false);
