@@ -10,7 +10,7 @@ namespace BezierComparador
         static void Main()
         {
             ApplicationConfiguration.Initialize();
-            Application.Run(new frmPruebas());
+            Application.Run(new frmPrincipal());
         }
     }
 }

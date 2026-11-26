@@ -163,8 +163,14 @@ namespace BezierComparador
             splContenedor = new SplitContainer();
             splContenedor.Dock = DockStyle.Fill;
             splContenedor.Orientation = Orientation.Horizontal;
-            splContenedor.SplitterDistance = 320;
+            splContenedor.Panel1MinSize = 180;
+            splContenedor.Panel2MinSize = 220;
             splContenedor.Padding = new Padding(12, 6, 12, 12);
+
+            this.Load += (objRemitente, objArgs) =>
+            {
+                splContenedor.SplitterDistance = (this.ClientSize.Height - pnlSuperior.Height) / 2;
+            };
 
             grpResultados = new GroupBox();
             grpResultados.Text = "Tabla de resultados (en verde el metodo mas rapido por fila)";
