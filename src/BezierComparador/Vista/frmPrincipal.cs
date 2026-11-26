@@ -159,8 +159,8 @@ namespace BezierComparador
             pnlTarjetaPuntos.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             pnlTarjetaPuntos.BolMostrarAcentoSuperior = true;
             pnlTarjetaPuntos.ColAcentoSuperior = clsTemaUI.ColPeligro;
-            pnlTarjetaPuntos.Padding = new Padding(12, 12, 12, 10);
-            pnlTarjetaPuntos.Margin = new Padding(0, 0, 0, 10);
+            pnlTarjetaPuntos.Padding = new Padding(10, 10, 10, 8);
+            pnlTarjetaPuntos.Margin = new Padding(0, 0, 0, 8);
 
             TableLayoutPanel tblPuntos = new TableLayoutPanel();
             tblPuntos.Dock = DockStyle.Top;
@@ -174,7 +174,7 @@ namespace BezierComparador
             tblCabPuntos.ColumnCount = 2;
             tblCabPuntos.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55F));
             tblCabPuntos.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F));
-            tblCabPuntos.Margin = new Padding(0, 0, 0, 6);
+            tblCabPuntos.Margin = new Padding(0, 0, 0, 4);
 
             Label lblTitPuntos = new Label();
             lblTitPuntos.Text = "Puntos de control";
@@ -191,13 +191,15 @@ namespace BezierComparador
 
             Panel pnlMarcoLista = new Panel();
             pnlMarcoLista.Dock = DockStyle.Top;
-            pnlMarcoLista.Height = 96;
+            pnlMarcoLista.Height = 76;
             pnlMarcoLista.BackColor = clsTemaUI.ColFondoApp;
-            pnlMarcoLista.Padding = new Padding(1);
-            pnlMarcoLista.Margin = new Padding(0, 0, 0, 8);
+            pnlMarcoLista.Padding = new Padding(2);
+            pnlMarcoLista.Margin = new Padding(0, 0, 0, 6);
             pnlMarcoLista.Paint += (objRem, objArgs) =>
             {
-                using (Pen penBorde = new Pen(clsTemaUI.ColBordeSutil, 1F))
+                Color colBordeLista = lstListaPuntos.Focused ? clsTemaUI.ColFoco : clsTemaUI.ColBordeSutil;
+                float fltGrosor = lstListaPuntos.Focused ? 2F : 1F;
+                using (Pen penBorde = new Pen(colBordeLista, fltGrosor))
                 {
                     objArgs.Graphics.DrawRectangle(penBorde, 0, 0, pnlMarcoLista.Width - 1, pnlMarcoLista.Height - 1);
                 }
@@ -210,6 +212,11 @@ namespace BezierComparador
             lstListaPuntos.ForeColor = clsTemaUI.ColTextoPrincipal;
             lstListaPuntos.Font = clsTemaUI.FntMonoespacio;
             lstListaPuntos.IntegralHeight = false;
+            lstListaPuntos.TabIndex = 0;
+            lstListaPuntos.AccessibleName = "Lista de puntos de control";
+            lstListaPuntos.AccessibleDescription = "Muestra las coordenadas X e Y de los puntos de control actuales";
+            lstListaPuntos.Enter += (objRem, objArgs) => pnlMarcoLista.Invalidate();
+            lstListaPuntos.Leave += (objRem, objArgs) => pnlMarcoLista.Invalidate();
             pnlMarcoLista.Controls.Add(lstListaPuntos);
 
             TableLayoutPanel tblBotonesPuntos = new TableLayoutPanel();
@@ -224,14 +231,18 @@ namespace BezierComparador
             btnCurvaEjemplo.Text = "Cargar curva grado 3";
             btnCurvaEjemplo.Dock = DockStyle.Fill;
             btnCurvaEjemplo.Margin = new Padding(0, 0, 4, 0);
+            btnCurvaEjemplo.TabIndex = 1;
+            btnCurvaEjemplo.AccessibleName = "Cargar curva de ejemplo grado 3";
             clsTemaUI.AplicarEstiloBotonSecundario(btnCurvaEjemplo);
             btnCurvaEjemplo.Click += BtnCurvaEjemplo_Click;
-            tipAyuda.SetToolTip(btnCurvaEjemplo, "Carga 4 puntos de control de ejemplo para una curva cubica");
+            tipAyuda.SetToolTip(btnCurvaEjemplo, "Carga 4 puntos de control de ejemplo para una curva cúbica");
 
             btnLimpiar = new Button();
             btnLimpiar.Text = "Limpiar lienzo";
             btnLimpiar.Dock = DockStyle.Fill;
             btnLimpiar.Margin = new Padding(4, 0, 0, 0);
+            btnLimpiar.TabIndex = 2;
+            btnLimpiar.AccessibleName = "Limpiar todos los puntos del lienzo";
             clsTemaUI.AplicarEstiloBotonPeligroSuave(btnLimpiar);
             btnLimpiar.Click += BtnLimpiar_Click;
             tipAyuda.SetToolTip(btnLimpiar, "Elimina todos los puntos de control del lienzo");
@@ -251,8 +262,8 @@ namespace BezierComparador
             pnlTarjetaConfiguracion.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             pnlTarjetaConfiguracion.BolMostrarAcentoSuperior = true;
             pnlTarjetaConfiguracion.ColAcentoSuperior = clsTemaUI.ColPrimario;
-            pnlTarjetaConfiguracion.Padding = new Padding(12, 12, 12, 8);
-            pnlTarjetaConfiguracion.Margin = new Padding(0, 0, 0, 10);
+            pnlTarjetaConfiguracion.Padding = new Padding(10, 10, 10, 6);
+            pnlTarjetaConfiguracion.Margin = new Padding(0, 0, 0, 8);
 
             TableLayoutPanel tblConfig = new TableLayoutPanel();
             tblConfig.Dock = DockStyle.Top;
@@ -261,19 +272,19 @@ namespace BezierComparador
             tblConfig.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
 
             Label lblTitConfig = new Label();
-            lblTitConfig.Text = "Configuracion y capas";
+            lblTitConfig.Text = "Configuración y capas";
             lblTitConfig.Font = clsTemaUI.FntTituloTarjeta;
             lblTitConfig.ForeColor = clsTemaUI.ColTextoPrincipal;
             lblTitConfig.AutoSize = true;
-            lblTitConfig.Margin = new Padding(0, 0, 0, 8);
+            lblTitConfig.Margin = new Padding(0, 0, 0, 6);
 
             TableLayoutPanel tblFilaMuestras = new TableLayoutPanel();
             tblFilaMuestras.Dock = DockStyle.Top;
-            tblFilaMuestras.Height = 30;
+            tblFilaMuestras.Height = 28;
             tblFilaMuestras.ColumnCount = 2;
             tblFilaMuestras.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60F));
             tblFilaMuestras.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
-            tblFilaMuestras.Margin = new Padding(0, 0, 0, 6);
+            tblFilaMuestras.Margin = new Padding(0, 0, 0, 4);
 
             lblMuestras = new Label();
             lblMuestras.Text = "Cantidad de muestras (N):";
@@ -289,8 +300,10 @@ namespace BezierComparador
             numMuestras.Font = clsTemaUI.FntMonoespacio;
             numMuestras.Dock = DockStyle.Fill;
             numMuestras.TextAlign = HorizontalAlignment.Right;
+            numMuestras.TabIndex = 3;
+            numMuestras.AccessibleName = "Cantidad de muestras N";
             numMuestras.ValueChanged += Configuracion_Changed;
-            tipAyuda.SetToolTip(numMuestras, "Numero de puntos evaluados a lo largo de la curva");
+            tipAyuda.SetToolTip(numMuestras, "Número de puntos evaluados a lo largo de la curva");
 
             tblFilaMuestras.Controls.Add(lblMuestras, 0, 0);
             tblFilaMuestras.Controls.Add(numMuestras, 1, 0);
@@ -302,7 +315,9 @@ namespace BezierComparador
             chkBernstein.Checked = true;
             chkBernstein.AutoSize = true;
             chkBernstein.Cursor = Cursors.Hand;
-            chkBernstein.Margin = new Padding(2, 2, 0, 2);
+            chkBernstein.TabIndex = 4;
+            chkBernstein.AccessibleName = "Mostrar curva con Polinomios de Bernstein";
+            chkBernstein.Margin = new Padding(2, 1, 0, 1);
             chkBernstein.CheckedChanged += Configuracion_Changed;
 
             chkCasteljau = new CheckBox();
@@ -312,7 +327,9 @@ namespace BezierComparador
             chkCasteljau.Checked = true;
             chkCasteljau.AutoSize = true;
             chkCasteljau.Cursor = Cursors.Hand;
-            chkCasteljau.Margin = new Padding(2, 2, 0, 2);
+            chkCasteljau.TabIndex = 5;
+            chkCasteljau.AccessibleName = "Mostrar curva con Algoritmo De Casteljau";
+            chkCasteljau.Margin = new Padding(2, 1, 0, 1);
             chkCasteljau.CheckedChanged += Configuracion_Changed;
 
             chkInterpolaciones = new CheckBox();
@@ -322,43 +339,51 @@ namespace BezierComparador
             chkInterpolaciones.Checked = true;
             chkInterpolaciones.AutoSize = true;
             chkInterpolaciones.Cursor = Cursors.Hand;
-            chkInterpolaciones.Margin = new Padding(2, 2, 0, 2);
+            chkInterpolaciones.TabIndex = 6;
+            chkInterpolaciones.AccessibleName = "Mostrar interpolaciones de De Casteljau";
+            chkInterpolaciones.Margin = new Padding(2, 1, 0, 1);
             chkInterpolaciones.CheckedChanged += Configuracion_Changed;
 
             chkPoligono = new CheckBox();
-            chkPoligono.Text = "[Rojo/Gris] Puntos y poligono de control";
+            chkPoligono.Text = "[Rojo/Gris] Puntos y polígono de control";
             chkPoligono.ForeColor = clsTemaUI.ColPeligroHover;
             chkPoligono.Font = clsTemaUI.FntCuerpo;
             chkPoligono.Checked = true;
             chkPoligono.AutoSize = true;
             chkPoligono.Cursor = Cursors.Hand;
-            chkPoligono.Margin = new Padding(2, 2, 0, 6);
+            chkPoligono.TabIndex = 7;
+            chkPoligono.AccessibleName = "Mostrar puntos y polígono de control";
+            chkPoligono.Margin = new Padding(2, 1, 0, 4);
             chkPoligono.CheckedChanged += Configuracion_Changed;
 
             Panel pnlSepT = clsTemaUI.CrearSeparadorHorizontal();
-            pnlSepT.Margin = new Padding(0, 2, 0, 6);
+            pnlSepT.Margin = new Padding(0, 2, 0, 4);
 
             lblParametroT = new Label();
-            lblParametroT.Text = "Parametro de interpolacion t = 0.50";
+            lblParametroT.Text = "Parámetro de interpolación t = 0.50";
             lblParametroT.Font = clsTemaUI.FntCuerpoNegrita;
             lblParametroT.ForeColor = clsTemaUI.ColTextoPrincipal;
             lblParametroT.AutoSize = true;
-            lblParametroT.Margin = new Padding(0, 2, 0, 0);
+            lblParametroT.Margin = new Padding(0, 1, 0, 0);
 
             trkParametroT = new TrackBar();
             trkParametroT.Minimum = 0;
             trkParametroT.Maximum = 100;
             trkParametroT.Value = 50;
             trkParametroT.TickFrequency = 10;
+            trkParametroT.AutoSize = false;
             trkParametroT.Dock = DockStyle.Top;
-            trkParametroT.Height = 34;
+            trkParametroT.Height = 26;
+            trkParametroT.TabIndex = 8;
+            trkParametroT.AccessibleName = "Parámetro de interpolación t";
+            trkParametroT.AccessibleDescription = "Control deslizante de 0.00 a 1.00 para observar las subdivisiones de De Casteljau";
             trkParametroT.Margin = new Padding(0, 2, 0, 0);
             trkParametroT.Scroll += TrkParametroT_Scroll;
             tipAyuda.SetToolTip(trkParametroT, "Deslice para ver las subdivisiones de De Casteljau en t");
 
             TableLayoutPanel tblEscalaT = new TableLayoutPanel();
             tblEscalaT.Dock = DockStyle.Top;
-            tblEscalaT.Height = 16;
+            tblEscalaT.Height = 14;
             tblEscalaT.ColumnCount = 5;
             for (int entCol = 0; entCol < 5; entCol++)
             {
@@ -397,7 +422,7 @@ namespace BezierComparador
             pnlTarjetaResultados.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             pnlTarjetaResultados.BolMostrarAcentoSuperior = true;
             pnlTarjetaResultados.ColAcentoSuperior = clsTemaUI.ColExito;
-            pnlTarjetaResultados.Padding = new Padding(12, 12, 12, 12);
+            pnlTarjetaResultados.Padding = new Padding(10, 10, 10, 10);
             pnlTarjetaResultados.Margin = new Padding(0);
 
             TableLayoutPanel tblRes = new TableLayoutPanel();
@@ -412,10 +437,10 @@ namespace BezierComparador
             tblCabRes.ColumnCount = 2;
             tblCabRes.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 62F));
             tblCabRes.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38F));
-            tblCabRes.Margin = new Padding(0, 0, 0, 8);
+            tblCabRes.Margin = new Padding(0, 0, 0, 6);
 
             Label lblTitRes = new Label();
-            lblTitRes.Text = "Metricas de la curva actual";
+            lblTitRes.Text = "Métricas de la curva actual";
             lblTitRes.Font = clsTemaUI.FntTituloTarjeta;
             lblTitRes.ForeColor = clsTemaUI.ColTextoPrincipal;
             lblTitRes.AutoSize = true;
@@ -433,8 +458,8 @@ namespace BezierComparador
             pnlCajaMetricas.Dock = DockStyle.Top;
             pnlCajaMetricas.AutoSize = true;
             pnlCajaMetricas.BackColor = clsTemaUI.ColFondoApp;
-            pnlCajaMetricas.Padding = new Padding(10, 8, 10, 8);
-            pnlCajaMetricas.Margin = new Padding(0, 0, 0, 10);
+            pnlCajaMetricas.Padding = new Padding(8, 6, 8, 6);
+            pnlCajaMetricas.Margin = new Padding(0, 0, 0, 8);
             pnlCajaMetricas.Paint += (objRem, objArgs) =>
             {
                 using (Pen penBorde = new Pen(clsTemaUI.ColBordeSutil, 1F))
@@ -454,38 +479,38 @@ namespace BezierComparador
             lblTiempoBernstein.Font = clsTemaUI.FntMonoespacioNegrita;
             lblTiempoBernstein.ForeColor = clsTemaUI.ColPrimario;
             lblTiempoBernstein.AutoSize = true;
-            lblTiempoBernstein.Margin = new Padding(0, 1, 0, 3);
+            lblTiempoBernstein.Margin = new Padding(0, 0, 0, 2);
 
             lblTiempoCasteljau = new Label();
             lblTiempoCasteljau.Text = "Tiempo De Casteljau (10 rep): 0.0000 ms";
             lblTiempoCasteljau.Font = clsTemaUI.FntMonoespacioNegrita;
             lblTiempoCasteljau.ForeColor = clsTemaUI.ColCasteljau;
             lblTiempoCasteljau.AutoSize = true;
-            lblTiempoCasteljau.Margin = new Padding(0, 1, 0, 6);
+            lblTiempoCasteljau.Margin = new Padding(0, 0, 0, 4);
 
             Panel pnlSepMet = clsTemaUI.CrearSeparadorHorizontal();
-            pnlSepMet.Margin = new Padding(0, 0, 0, 6);
+            pnlSepMet.Margin = new Padding(0, 0, 0, 4);
 
             lblErrorMaximo = new Label();
-            lblErrorMaximo.Text = "Diferencia maxima:   0.000E+000";
+            lblErrorMaximo.Text = "Diferencia máxima:   0.000E+000";
             lblErrorMaximo.Font = clsTemaUI.FntMonoespacioPeque;
             lblErrorMaximo.ForeColor = clsTemaUI.ColTextoPrincipal;
             lblErrorMaximo.AutoSize = true;
-            lblErrorMaximo.Margin = new Padding(0, 1, 0, 2);
+            lblErrorMaximo.Margin = new Padding(0, 0, 0, 1);
 
             lblErrorPromedio = new Label();
             lblErrorPromedio.Text = "Diferencia promedio: 0.000E+000";
             lblErrorPromedio.Font = clsTemaUI.FntMonoespacioPeque;
             lblErrorPromedio.ForeColor = clsTemaUI.ColTextoSecundario;
             lblErrorPromedio.AutoSize = true;
-            lblErrorPromedio.Margin = new Padding(0, 1, 0, 2);
+            lblErrorPromedio.Margin = new Padding(0, 0, 0, 1);
 
             lblErrorEcm = new Label();
             lblErrorEcm.Text = "ECM:                 0.000E+000";
             lblErrorEcm.Font = clsTemaUI.FntMonoespacioPeque;
             lblErrorEcm.ForeColor = clsTemaUI.ColTextoSecundario;
             lblErrorEcm.AutoSize = true;
-            lblErrorEcm.Margin = new Padding(0, 1, 0, 1);
+            lblErrorEcm.Margin = new Padding(0);
 
             tblMetricas.Controls.Add(lblTiempoBernstein, 0, 0);
             tblMetricas.Controls.Add(lblTiempoCasteljau, 0, 1);
@@ -498,20 +523,24 @@ namespace BezierComparador
             btnMedir = new Button();
             btnMedir.Text = "Medir curva actual (Stopwatch 10 rep)";
             btnMedir.Dock = DockStyle.Top;
-            btnMedir.Height = 36;
-            btnMedir.Margin = new Padding(0, 0, 0, 8);
+            btnMedir.Height = 34;
+            btnMedir.TabIndex = 9;
+            btnMedir.AccessibleName = "Medir curva actual con Stopwatch en 10 repeticiones";
+            btnMedir.Margin = new Padding(0, 0, 0, 6);
             clsTemaUI.AplicarEstiloBotonPrimario(btnMedir);
             btnMedir.Click += BtnMedir_Click;
             tipAyuda.SetToolTip(btnMedir, "Mide 10 repeticiones con calentamiento de la curva dibujada");
 
             btnAbrirLaboratorio = new Button();
-            btnAbrirLaboratorio.Text = "Abrir Laboratorio y Graficos Comparativos";
+            btnAbrirLaboratorio.Text = "Abrir Laboratorio y Gráficos Comparativos";
             btnAbrirLaboratorio.Dock = DockStyle.Top;
-            btnAbrirLaboratorio.Height = 38;
+            btnAbrirLaboratorio.Height = 36;
+            btnAbrirLaboratorio.TabIndex = 10;
+            btnAbrirLaboratorio.AccessibleName = "Abrir ventana de Laboratorio y Gráficos Comparativos";
             btnAbrirLaboratorio.Margin = new Padding(0);
             clsTemaUI.AplicarEstiloBotonExito(btnAbrirLaboratorio);
             btnAbrirLaboratorio.Click += BtnAbrirLaboratorio_Click;
-            tipAyuda.SetToolTip(btnAbrirLaboratorio, "Abre la ventana frmPruebas con la tabla de experimentos y los graficos Tiempo vs Muestras/Grado");
+            tipAyuda.SetToolTip(btnAbrirLaboratorio, "Abre la ventana frmPruebas con la tabla de experimentos y los gráficos Tiempo vs Muestras/Grado");
 
             tblRes.Controls.Add(tblCabRes, 0, 0);
             tblRes.Controls.Add(pnlCajaMetricas, 0, 1);
@@ -538,33 +567,40 @@ namespace BezierComparador
             pnlBarraEstadoLienzo.Dock = DockStyle.Bottom;
             pnlBarraEstadoLienzo.Height = 32;
             pnlBarraEstadoLienzo.BackColor = clsTemaUI.ColSuperficieSutil;
-            pnlBarraEstadoLienzo.Padding = new Padding(12, 0, 12, 0);
+            pnlBarraEstadoLienzo.Padding = new Padding(10, 0, 10, 0);
 
             Panel pnlLineaEstado = new Panel();
             pnlLineaEstado.Dock = DockStyle.Top;
             pnlLineaEstado.Height = 1;
             pnlLineaEstado.BackColor = clsTemaUI.ColBordeSutil;
 
+            TableLayoutPanel tblBarraEstado = new TableLayoutPanel();
+            tblBarraEstado.Dock = DockStyle.Fill;
+            tblBarraEstado.ColumnCount = 2;
+            tblBarraEstado.RowCount = 1;
+            tblBarraEstado.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 45F));
+            tblBarraEstado.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 55F));
+
             lblMensajeEstado = new Label();
             lblMensajeEstado.Text = "Listo para interactuar con el lienzo.";
-            lblMensajeEstado.Dock = DockStyle.Left;
-            lblMensajeEstado.AutoSize = true;
+            lblMensajeEstado.Dock = DockStyle.Fill;
+            lblMensajeEstado.AutoEllipsis = true;
             lblMensajeEstado.TextAlign = ContentAlignment.MiddleLeft;
             lblMensajeEstado.Font = clsTemaUI.FntEtiquetaPequeNegrita;
             lblMensajeEstado.ForeColor = clsTemaUI.ColTextoPrincipal;
-            lblMensajeEstado.Padding = new Padding(0, 8, 0, 0);
 
             lblGuiaInteraccion = new Label();
-            lblGuiaInteraccion.Text = "Clic izq.: agregar/mover  |  Arrastrar: deformar  |  Clic der.: eliminar";
-            lblGuiaInteraccion.Dock = DockStyle.Right;
-            lblGuiaInteraccion.AutoSize = true;
+            lblGuiaInteraccion.Text = "Clic izq.: agregar/mover · Arrastrar: deformar · Clic der.: eliminar";
+            lblGuiaInteraccion.Dock = DockStyle.Fill;
+            lblGuiaInteraccion.AutoEllipsis = true;
             lblGuiaInteraccion.TextAlign = ContentAlignment.MiddleRight;
             lblGuiaInteraccion.Font = clsTemaUI.FntEtiquetaPeque;
             lblGuiaInteraccion.ForeColor = clsTemaUI.ColTextoSecundario;
-            lblGuiaInteraccion.Padding = new Padding(0, 8, 0, 0);
 
-            pnlBarraEstadoLienzo.Controls.Add(lblMensajeEstado);
-            pnlBarraEstadoLienzo.Controls.Add(lblGuiaInteraccion);
+            tblBarraEstado.Controls.Add(lblMensajeEstado, 0, 0);
+            tblBarraEstado.Controls.Add(lblGuiaInteraccion, 1, 0);
+
+            pnlBarraEstadoLienzo.Controls.Add(tblBarraEstado);
             pnlBarraEstadoLienzo.Controls.Add(pnlLineaEstado);
 
             picLienzo = new ctlLienzo();
@@ -680,7 +716,7 @@ namespace BezierComparador
         private void TrkParametroT_Scroll(object? objRemitente, EventArgs objArgs)
         {
             double dblT = trkParametroT.Value / 100.0;
-            lblParametroT.Text = "Parametro de interpolacion t = " + dblT.ToString("F2");
+            lblParametroT.Text = "Parámetro de interpolación t = " + dblT.ToString("F2");
             RecalcularYRedibujar(false);
         }
 
@@ -754,7 +790,7 @@ namespace BezierComparador
 
                 lblTiempoBernstein.Text = "Tiempo Bernstein (10 rep):    " + objResB.DblTiempoPromedioMs.ToString("F4") + " ms";
                 lblTiempoCasteljau.Text = "Tiempo De Casteljau (10 rep): " + objResC.DblTiempoPromedioMs.ToString("F4") + " ms";
-                lblErrorMaximo.Text = "Diferencia maxima:   " + objComp.DblDiferenciaMaxima.ToString("E3");
+                lblErrorMaximo.Text = "Diferencia máxima:   " + objComp.DblDiferenciaMaxima.ToString("E3");
                 lblErrorPromedio.Text = "Diferencia promedio: " + objComp.DblDiferenciaPromedio.ToString("E3");
                 lblErrorEcm.Text = "ECM:                 " + objComp.DblErrorCuadraticoMedio.ToString("E3");
 
@@ -767,7 +803,7 @@ namespace BezierComparador
                 clsComparador objComp = new clsComparador();
                 clsResultadoComparacion objDif = objComp.Comparar(objResB.ArrPuntosCurva, objResC.ArrPuntosCurva);
 
-                lblErrorMaximo.Text = "Diferencia maxima:   " + objDif.DblDiferenciaMaxima.ToString("E3");
+                lblErrorMaximo.Text = "Diferencia máxima:   " + objDif.DblDiferenciaMaxima.ToString("E3");
                 lblErrorPromedio.Text = "Diferencia promedio: " + objDif.DblDiferenciaPromedio.ToString("E3");
                 lblErrorEcm.Text = "ECM:                 " + objDif.DblErrorCuadraticoMedio.ToString("E3");
 

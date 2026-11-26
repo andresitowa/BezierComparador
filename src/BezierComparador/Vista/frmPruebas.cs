@@ -135,38 +135,36 @@ namespace BezierComparador
             pnlCabecera.Controls.Add(tblCab);
             pnlCabecera.Controls.Add(pnlBordeCab);
 
-            // 2. Barra de comandos superior dentro de tarjeta responsiva
+            // 2. Barra de comandos superior compacta dentro de tarjeta responsiva (sin exceso de espacio blanco)
             pnlSuperior = new Panel();
             pnlSuperior.Dock = DockStyle.Top;
-            pnlSuperior.AutoSize = true;
-            pnlSuperior.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            pnlSuperior.Height = 104;
             pnlSuperior.Padding = new Padding(clsTemaUI.EntEspacioMd, 10, clsTemaUI.EntEspacioMd, 4);
             pnlSuperior.BackColor = clsTemaUI.ColFondoApp;
 
             pnlTarjetaControles = new pnlTarjetaUI();
-            pnlTarjetaControles.Dock = DockStyle.Top;
-            pnlTarjetaControles.AutoSize = true;
-            pnlTarjetaControles.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            pnlTarjetaControles.Padding = new Padding(12, 10, 12, 10);
+            pnlTarjetaControles.Dock = DockStyle.Fill;
+            pnlTarjetaControles.Padding = new Padding(12, 8, 12, 8);
 
             TableLayoutPanel tblBarraComandos = new TableLayoutPanel();
-            tblBarraComandos.Dock = DockStyle.Top;
-            tblBarraComandos.AutoSize = true;
+            tblBarraComandos.Dock = DockStyle.Fill;
             tblBarraComandos.ColumnCount = 1;
+            tblBarraComandos.RowCount = 2;
             tblBarraComandos.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tblBarraComandos.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
+            tblBarraComandos.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             FlowLayoutPanel flwAcciones = new FlowLayoutPanel();
-            flwAcciones.Dock = DockStyle.Top;
-            flwAcciones.AutoSize = true;
-            flwAcciones.WrapContents = true;
-            flwAcciones.Margin = new Padding(0, 0, 0, 8);
+            flwAcciones.Dock = DockStyle.Fill;
+            flwAcciones.WrapContents = false;
+            flwAcciones.Margin = new Padding(0);
 
             lblRepeticiones = new Label();
-            lblRepeticiones.Text = "Repeticiones (min 10):";
+            lblRepeticiones.Text = "Repeticiones (mín. 10):";
             lblRepeticiones.Font = clsTemaUI.FntCuerpoNegrita;
             lblRepeticiones.ForeColor = clsTemaUI.ColTextoSecundario;
             lblRepeticiones.AutoSize = true;
-            lblRepeticiones.Margin = new Padding(0, 8, 6, 4);
+            lblRepeticiones.Margin = new Padding(0, 8, 6, 0);
 
             numRepeticiones = new NumericUpDown();
             numRepeticiones.Minimum = 10;
@@ -175,21 +173,27 @@ namespace BezierComparador
             numRepeticiones.Width = 68;
             numRepeticiones.Font = clsTemaUI.FntMonoespacio;
             numRepeticiones.TextAlign = HorizontalAlignment.Right;
-            numRepeticiones.Margin = new Padding(0, 5, 14, 4);
+            numRepeticiones.TabIndex = 0;
+            numRepeticiones.AccessibleName = "Repeticiones por prueba";
+            numRepeticiones.Margin = new Padding(0, 5, 14, 0);
             tipAyuda.SetToolTip(numRepeticiones, "Cantidad de repeticiones por prueba (con calentamiento previo)");
 
             btnEjecutar = new Button();
             btnEjecutar.Text = "Ejecutar pruebas";
             btnEjecutar.Size = new Size(148, clsTemaUI.EntAlturaBoton);
-            btnEjecutar.Margin = new Padding(0, 0, 8, 4);
+            btnEjecutar.TabIndex = 1;
+            btnEjecutar.AccessibleName = "Ejecutar batería completa de pruebas";
+            btnEjecutar.Margin = new Padding(0, 0, 8, 0);
             clsTemaUI.AplicarEstiloBotonPrimario(btnEjecutar);
             btnEjecutar.Click += BtnEjecutar_Click;
-            tipAyuda.SetToolTip(btnEjecutar, "Ejecuta los experimentos de rendimiento y actualiza tabla y graficos");
+            tipAyuda.SetToolTip(btnEjecutar, "Ejecuta los experimentos de rendimiento y actualiza tabla y gráficos");
 
             btnEstabilidad = new Button();
             btnEstabilidad.Text = "Estabilidad (n=50, 100)";
             btnEstabilidad.Size = new Size(176, clsTemaUI.EntAlturaBoton);
-            btnEstabilidad.Margin = new Padding(0, 0, 14, 4);
+            btnEstabilidad.TabIndex = 2;
+            btnEstabilidad.AccessibleName = "Ejecutar prueba de estabilidad numérica en grados 50 y 100";
+            btnEstabilidad.Margin = new Padding(0, 0, 14, 0);
             clsTemaUI.AplicarEstiloBotonExito(btnEstabilidad);
             btnEstabilidad.Click += BtnEstabilidad_Click;
             tipAyuda.SetToolTip(btnEstabilidad, "Compara grados 50 y 100 contra referencia decimal de 128 bits");
@@ -197,7 +201,9 @@ namespace BezierComparador
             btnExportarCsv = new Button();
             btnExportarCsv.Text = "Exportar CSV";
             btnExportarCsv.Size = new Size(124, clsTemaUI.EntAlturaBoton);
-            btnExportarCsv.Margin = new Padding(0, 0, 8, 4);
+            btnExportarCsv.TabIndex = 3;
+            btnExportarCsv.AccessibleName = "Exportar resultados a archivo CSV";
+            btnExportarCsv.Margin = new Padding(0, 0, 8, 0);
             clsTemaUI.AplicarEstiloBotonSecundario(btnExportarCsv);
             btnExportarCsv.Click += BtnExportarCsv_Click;
             tipAyuda.SetToolTip(btnExportarCsv, "Exporta la tabla de resultados y estabilidad a un archivo CSV");
@@ -205,10 +211,12 @@ namespace BezierComparador
             btnGuardarPng = new Button();
             btnGuardarPng.Text = "Guardar PNG";
             btnGuardarPng.Size = new Size(124, clsTemaUI.EntAlturaBoton);
-            btnGuardarPng.Margin = new Padding(0, 0, 0, 4);
+            btnGuardarPng.TabIndex = 4;
+            btnGuardarPng.AccessibleName = "Guardar gráficos comparativos como imágenes PNG";
+            btnGuardarPng.Margin = new Padding(0);
             clsTemaUI.AplicarEstiloBotonSecundario(btnGuardarPng);
             btnGuardarPng.Click += BtnGuardarPng_Click;
-            tipAyuda.SetToolTip(btnGuardarPng, "Guarda los dos graficos comparativos en formato PNG para el informe LaTeX");
+            tipAyuda.SetToolTip(btnGuardarPng, "Guarda los dos gráficos comparativos en formato PNG para el informe LaTeX");
 
             flwAcciones.Controls.Add(lblRepeticiones);
             flwAcciones.Controls.Add(numRepeticiones);
@@ -218,16 +226,16 @@ namespace BezierComparador
             flwAcciones.Controls.Add(btnGuardarPng);
 
             TableLayoutPanel tblEstado = new TableLayoutPanel();
-            tblEstado.Dock = DockStyle.Top;
-            tblEstado.Height = 26;
+            tblEstado.Dock = DockStyle.Fill;
             tblEstado.ColumnCount = 2;
             tblEstado.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 74F));
             tblEstado.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 26F));
             tblEstado.Margin = new Padding(0);
 
             lblEstado = new Label();
-            lblEstado.Text = "Estado: Listo. Presione 'Ejecutar pruebas' o 'Estabilidad' para iniciar.";
+            lblEstado.Text = "Estado: Listo. Presione «Ejecutar pruebas» o «Estabilidad» para iniciar.";
             lblEstado.Dock = DockStyle.Fill;
+            lblEstado.AutoEllipsis = true;
             lblEstado.TextAlign = ContentAlignment.MiddleLeft;
             lblEstado.Font = clsTemaUI.FntEtiquetaPequeNegrita;
             lblEstado.ForeColor = clsTemaUI.ColTextoSecundario;
@@ -237,7 +245,8 @@ namespace BezierComparador
             prgProgreso.Minimum = 0;
             prgProgreso.Maximum = 100;
             prgProgreso.Value = 0;
-            prgProgreso.Margin = new Padding(12, 3, 0, 3);
+            prgProgreso.AccessibleName = "Progreso de ejecución de pruebas";
+            prgProgreso.Margin = new Padding(12, 4, 0, 4);
 
             tblEstado.Controls.Add(lblEstado, 0, 0);
             tblEstado.Controls.Add(prgProgreso, 1, 0);
@@ -255,6 +264,8 @@ namespace BezierComparador
 
             tabContenedor = new TabControl();
             tabContenedor.Dock = DockStyle.Fill;
+            tabContenedor.TabIndex = 5;
+            tabContenedor.AccessibleName = "Vistas del laboratorio de pruebas";
             tabContenedor.Font = clsTemaUI.FntCuerpoNegrita;
             tabContenedor.DrawMode = TabDrawMode.OwnerDrawFixed;
             tabContenedor.SizeMode = TabSizeMode.Fixed;
@@ -265,7 +276,7 @@ namespace BezierComparador
             tabTablaResultados.BackColor = clsTemaUI.ColFondoApp;
             tabTablaResultados.Padding = new Padding(0, 8, 0, 0);
 
-            tabGraficosComparativos = new TabPage("2. Graficos Comparativos (Muestras y Grado)");
+            tabGraficosComparativos = new TabPage("2. Gráficos Comparativos (Muestras y Grado)");
             tabGraficosComparativos.BackColor = clsTemaUI.ColFondoApp;
             tabGraficosComparativos.Padding = new Padding(0, 8, 0, 0);
 
@@ -320,6 +331,8 @@ namespace BezierComparador
 
             dgvResultados = new DataGridView();
             dgvResultados.Dock = DockStyle.Fill;
+            dgvResultados.TabIndex = 6;
+            dgvResultados.AccessibleName = "Tabla comparativa de resultados experimentales";
             dgvResultados.AllowUserToAddRows = false;
             dgvResultados.AllowUserToDeleteRows = false;
             dgvResultados.ReadOnly = true;
@@ -335,17 +348,15 @@ namespace BezierComparador
             pnlTarjetaTabla.Controls.Add(pnlCabTabla);
             tabTablaResultados.Controls.Add(pnlTarjetaTabla);
 
-            // Pestana 2: Filtros en tarjeta + 2 tarjetas de graficos lado a lado
+            // Pestana 2: Filtros en tarjeta compacta + 2 tarjetas de graficos lado a lado
             pnlTarjetaFiltros = new pnlTarjetaUI();
             pnlTarjetaFiltros.Dock = DockStyle.Top;
-            pnlTarjetaFiltros.AutoSize = true;
-            pnlTarjetaFiltros.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            pnlTarjetaFiltros.Height = 46;
             pnlTarjetaFiltros.Padding = new Padding(12, 8, 12, 8);
 
             FlowLayoutPanel flwFiltros = new FlowLayoutPanel();
-            flwFiltros.Dock = DockStyle.Top;
-            flwFiltros.AutoSize = true;
-            flwFiltros.WrapContents = true;
+            flwFiltros.Dock = DockStyle.Fill;
+            flwFiltros.WrapContents = false;
             flwFiltros.Margin = new Padding(0);
 
             lblGradoFijo = new Label();
@@ -480,6 +491,16 @@ namespace BezierComparador
                 using (Pen penDiv = new Pen(clsTemaUI.ColBordeSutil, 1F))
                 {
                     objArgs.Graphics.DrawLine(penDiv, objRect.Left, objRect.Bottom - 1, objRect.Right, objRect.Bottom - 1);
+                }
+            }
+
+            if ((objArgs.State & DrawItemState.Focus) == DrawItemState.Focus)
+            {
+                Rectangle objRectFoco = new Rectangle(objRect.X + 2, objRect.Y + 2, objRect.Width - 5, objRect.Height - 6);
+                using (Pen penFoco = new Pen(clsTemaUI.ColFoco, 1.5F))
+                {
+                    penFoco.DashStyle = DashStyle.Dot;
+                    objArgs.Graphics.DrawRectangle(penFoco, objRectFoco);
                 }
             }
 
@@ -749,6 +770,8 @@ namespace BezierComparador
                     objFilaVisual.Cells[4].Style.Font = clsTemaUI.FntMonoespacioNegrita;
                 }
             }
+
+            dgvResultados.ClearSelection();
         }
 
         // Evento Paint para el grafico de Tiempo vs Muestras

@@ -185,6 +185,9 @@ namespace BezierComparador
             btnControl.Height = Math.Max(btnControl.Height, EntAlturaBoton);
 
             Color colBordeOriginal = colBorde;
+            Color colFondoOriginal = colFondo;
+            Color colTextoOriginal = colTexto;
+
             btnControl.Enter += (objRem, objArgs) =>
             {
                 btnControl.FlatAppearance.BorderSize = 2;
@@ -194,6 +197,23 @@ namespace BezierComparador
             {
                 btnControl.FlatAppearance.BorderSize = 1;
                 btnControl.FlatAppearance.BorderColor = colBordeOriginal;
+            };
+            btnControl.EnabledChanged += (objRem, objArgs) =>
+            {
+                if (btnControl.Enabled)
+                {
+                    btnControl.BackColor = colFondoOriginal;
+                    btnControl.ForeColor = colTextoOriginal;
+                    btnControl.FlatAppearance.BorderColor = colBordeOriginal;
+                    btnControl.Cursor = Cursors.Hand;
+                }
+                else
+                {
+                    btnControl.BackColor = ColBordeSutil;
+                    btnControl.ForeColor = ColTextoSecundario;
+                    btnControl.FlatAppearance.BorderColor = ColBordeTarjeta;
+                    btnControl.Cursor = Cursors.Default;
+                }
             };
         }
 

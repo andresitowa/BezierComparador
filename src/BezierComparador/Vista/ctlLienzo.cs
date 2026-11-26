@@ -81,6 +81,8 @@ namespace BezierComparador
             this.BackColor = clsTemaUI.ColSuperficieTarjeta;
             this.BorderStyle = BorderStyle.None;
             this.Cursor = Cursors.Cross;
+            this.AccessibleName = "Lienzo interactivo de curvas de Bezier";
+            this.AccessibleDescription = "Area de dibujo interactiva. Clic izquierdo agrega o arrastra puntos de control; clic derecho elimina.";
 
             lstPuntosControl = new List<clsPuntoControl>();
             arrPuntosBernstein = new clsPuntoControl[0];
@@ -329,9 +331,9 @@ namespace BezierComparador
                 objG.FillRectangle(brsFondo, objCaja);
                 objG.DrawRectangle(penBorde, objCaja);
 
-                objG.DrawString("Lienzo vacio — Agrega puntos de control", clsTemaUI.FntTituloTarjeta, brsTit, entX + 20, entY + 16);
+                objG.DrawString("Lienzo vacío — Agrega puntos de control", clsTemaUI.FntTituloTarjeta, brsTit, entX + 20, entY + 16);
                 objG.DrawString(
-                    "Haz clic izquierdo para crear puntos (minimo 2), arrastra para\ndeformar la curva o haz clic derecho para eliminar un punto.",
+                    "Haz clic izquierdo para crear puntos (mínimo 2), arrastra para\ndeformar la curva o haz clic derecho para eliminar un punto.",
                     clsTemaUI.FntEtiquetaPeque,
                     brsSub,
                     entX + 20,
@@ -374,12 +376,12 @@ namespace BezierComparador
         // Dibuja la leyenda compacta de capas activas en la esquina superior derecha del lienzo
         private void DibujarLeyendaFlotante(Graphics objG)
         {
-            if (this.Width < 360 || this.Height < 220)
+            if (this.Width < 580 || this.Height < 260)
             {
                 return;
             }
 
-            int entAncho = 228;
+            int entAncho = 224;
             int entAlto = 98;
             int entX = this.Width - entAncho - 14;
             int entY = 14;
@@ -403,7 +405,7 @@ namespace BezierComparador
 
                 int entFilaY = entY + 28;
                 objG.DrawLine(penBern, entX + 10, entFilaY + 6, entX + 28, entFilaY + 6);
-                objG.DrawString("Bernstein (linea continua)", clsTemaUI.FntEtiquetaPeque, brsTxt, entX + 34, entFilaY);
+                objG.DrawString("Bernstein (línea continua)", clsTemaUI.FntEtiquetaPeque, brsTxt, entX + 34, entFilaY);
 
                 entFilaY += 16;
                 objG.DrawLine(penCast, entX + 10, entFilaY + 6, entX + 28, entFilaY + 6);
@@ -411,7 +413,7 @@ namespace BezierComparador
 
                 entFilaY += 16;
                 objG.DrawLine(penInterp, entX + 10, entFilaY + 6, entX + 28, entFilaY + 6);
-                objG.DrawString("Subdivision t = " + dblParametroTActual.ToString("F2"), clsTemaUI.FntEtiquetaPeque, brsTxt, entX + 34, entFilaY);
+                objG.DrawString("Subdivisión t = " + dblParametroTActual.ToString("F2"), clsTemaUI.FntEtiquetaPeque, brsTxt, entX + 34, entFilaY);
 
                 entFilaY += 16;
                 objG.FillEllipse(brsCtrl, entX + 15, entFilaY + 2, 8, 8);
