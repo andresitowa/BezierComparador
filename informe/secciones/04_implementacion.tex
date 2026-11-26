@@ -193,7 +193,12 @@ La ventana principal se divide en tres regiones claramente diferenciadas, como s
     \item \textbf{Panel de graficos comparativos:} Dos paneles con doble buffer que muestran los graficos de \textit{Tiempo vs Muestras} (grado fijo) y \textit{Tiempo vs Grado} (muestras fijas), con filtros \texttt{ComboBox} para seleccionar los valores fijos. La leyenda identifica la serie azul como Bernstein y la naranja como De Casteljau.
 \end{enumerate}
 
-\capturaPendiente{14cm}{7cm}{Ventana principal del Laboratorio de Pruebas (frmPruebas) mostrando el panel de configuracion, la tabla de resultados con resaltado en verde y los graficos comparativos.}{fig:impl_ventana_principal}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figuras/impl_ventana_principal.png}
+\caption{Ventana principal interactiva de BezierComparador (\texttt{frmPrincipal}) mostrando el lienzo cartesiano, el panel de puntos de control, la configuracion de capas y las metricas en tiempo real.}
+\label{fig:impl_ventana_principal}
+\end{figure}
 
 \subsubsection{Ejecucion de Pruebas de Rendimiento}
 \label{subsubsec:impl_ejecutar}
@@ -213,9 +218,19 @@ Al presionar el boton \textit{Ejecutar pruebas}, la aplicacion realiza las sigui
 
 La clase \texttt{clsEvaluadorDeCasteljau} expone el metodo \texttt{ObtenerNivelesIntermedios}, que retorna la lista completa de poligonos intermedios $P_i^{(r)}$ para un valor fijo del parametro $t$. Cuando se activa esta visualizacion, la aplicacion dibuja los segmentos de cada nivel $r$ con colores diferenciados, permitiendo al usuario observar graficamente como la recurrencia de interpolacion lineal converge desde el poligono de control original ($r = 0$) hasta el punto final sobre la curva ($r = n$).
 
-\capturaPendiente{12cm}{6cm}{Curva de Bezier de grado 3 con cuatro puntos de control, mostrando la curva evaluada por ambos metodos superpuestos.}{fig:impl_curva_grado3}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{figuras/impl_curva_grado3.png}
+\caption{Curva de Bezier de grado 3 con cuatro puntos de control ($P_0$ a $P_3$), mostrando el poligono de control y las curvas evaluadas por Bernstein (azul continua) y De Casteljau (naranja discontinua) superpuestas.}
+\label{fig:impl_curva_grado3}
+\end{figure}
 
-\capturaPendiente{12cm}{6cm}{Interpolaciones de De Casteljau con $t = 0.5$ para una curva de grado 3, mostrando los poligonos intermedios de cada nivel $r$ en colores diferenciados.}{fig:impl_interpolaciones}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{figuras/impl_interpolaciones.png}
+\caption{Interpolaciones de De Casteljau con $t = 0.50$ para una curva de grado 3, mostrando los poligonos intermedios de cada nivel $r$ en verde esmeralda y el punto evaluado $C(0.50)$.}
+\label{fig:impl_interpolaciones}
+\end{figure}
 
 \subsubsection{Prueba de Estabilidad Numerica}
 \label{subsubsec:impl_estabilidad}
@@ -232,7 +247,12 @@ La aplicacion ofrece dos mecanismos de exportacion orientados a la generacion de
     \item \textbf{Guardar PNG:} Renderiza los dos graficos comparativos (\textit{Tiempo vs Muestras} y \textit{Tiempo vs Grado}) en imagenes de $800 \times 480$ pixeles en formato PNG, listas para ser incluidas directamente en el documento \LaTeX\ con \texttt{\textbackslash includegraphics}.
 \end{itemize}
 
-\capturaPendiente{14cm}{7cm}{Ventana de pruebas (frmPruebas) tras completar la ejecucion de los 24 casos experimentales, mostrando tabla, graficos y barra de estado.}{fig:impl_ventana_pruebas}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{figuras/impl_ventana_pruebas.png}
+\caption{Ventana del Laboratorio de Pruebas (\texttt{frmPruebas}) tras completar la ejecucion de los 24 casos experimentales, mostrando la tabla de resultados con resaltado verde del metodo mas rapido y el resumen de estabilidad numerica.}
+\label{fig:impl_ventana_pruebas}
+\end{figure}
 
 \subsection{Decisiones de Diseno UI/UX}
 \label{subsec:impl_uiux}
