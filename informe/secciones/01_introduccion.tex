@@ -26,7 +26,7 @@ Disenar, implementar y validar una aplicacion de escritorio en C\# con Windows F
 \subsection{Alcance del Proyecto}
 \label{subsec:intro_alcance}
 
-El presente proyecto abarca el desarrollo completo de la aplicacion \textit{BezierComparador}, desde el diseno arquitectonico hasta la experimentacion y el analisis de resultados. El sistema soporta curvas de Bezier bidimensionales de grado arbitrario (desde cuadraticas con $n = 2$ hasta grado $n = 50$ en las pruebas de rendimiento y $n = 100$ en las pruebas de estabilidad). La aplicacion consta de dos ventanas principales: una ventana interactiva para la visualizacion y manipulacion de curvas, y una ventana de laboratorio de pruebas (\texttt{frmPruebas}) que ejecuta automaticamente la bateria de $6 \times 4 = 24$ combinaciones $(n, N)$ con $n \in \{2, 3, 5, 10, 20, 50\}$ y $N \in \{100, 1000, 10000, 100000\}$.
+El presente proyecto abarca el desarrollo completo de la aplicacion \textit{BezierComparador}, desde el diseno arquitectonico hasta la validacion manual, la experimentacion y el analisis de resultados. El sistema soporta curvas de Bezier bidimensionales de grado arbitrario (desde cuadraticas con $n = 2$ hasta grado $n = 50$ en las pruebas de rendimiento y $n = 100$ en las pruebas de estabilidad). La aplicacion consta de dos ventanas principales: una ventana interactiva (\texttt{frmPrincipal}) con lienzo cartesiano (\texttt{ctlLienzo}) para la manipulacion en tiempo real de puntos de control e interpolaciones de De Casteljau, y una ventana de laboratorio de pruebas (\texttt{frmPruebas}) que ejecuta automaticamente la bateria de $6 \times 4 = 24$ combinaciones $(n, N)$ con $n \in \{2, 3, 5, 10, 20, 50\}$ y $N \in \{100, 1000, 10000, 100000\}$, ademas de un proyecto de consola (\texttt{BezierComparador.PruebaManual}) para verificar los calculos paso a paso.
 
 \subsection{Restriccion Fundamental: Prohibicion de Funciones Graficas de Curvas}
 \label{subsec:intro_restriccion}
@@ -40,9 +40,10 @@ El presente informe se organiza en las siguientes secciones:
 
 \begin{itemize}
     \item La \textbf{Seccion~\ref{sec:fundamentos}} desarrolla el marco teorico y matematico de las curvas de Bezier, los polinomios base de Bernstein, el algoritmo de De Casteljau y el analisis de complejidad asintotica de cada metodo.
-    \item La \textbf{Seccion~\ref{sec:estado_arte}} presenta una revision de trabajos relacionados y el estado del arte en la evaluacion eficiente de curvas parametricas.
-    \item La \textbf{Seccion~\ref{sec:implementacion}} describe la arquitectura de software (patron MVC), las tecnologias utilizadas (C\#, Windows Forms, .NET 8.0), el diagrama de clases, las convenciones de nomenclatura, el manual de usuario y las decisiones de diseno de la interfaz.
+    \item La \textbf{Seccion~\ref{sec:validacion}} realiza una validacion matematica manual paso a paso sobre una curva cubica de prueba y verifica su coincidencia exacta con la salida de la aplicacion.
+    \item La \textbf{Seccion~\ref{sec:implementacion}} describe la arquitectura de software (patron MVC), las tecnologias utilizadas (C\#, Windows Forms, .NET), el diagrama de clases, las convenciones de nomenclatura, el manual de usuario y las decisiones de diseno UI/UX.
     \item La \textbf{Seccion~\ref{sec:experimentacion}} detalla la metodologia experimental, el entorno de pruebas y los resultados de tiempo de ejecucion obtenidos para las $24$ combinaciones $(n, N)$.
     \item La \textbf{Seccion~\ref{sec:comparacion}} analiza las diferencias numericas entre ambos metodos, la prueba de estabilidad en grados altos y el contraste entre tiempos medidos y complejidad teorica.
     \item La \textbf{Seccion~\ref{sec:conclusiones}} sintetiza las conclusiones del estudio, proporciona una matriz de recomendaciones por escenario de uso y plantea las limitaciones y lineas de trabajo futuro.
+    \item La \textbf{Seccion~\ref{sec:anexos}} presenta el codigo fuente del modelo matematico y la salida completa de la validacion manual.
 \end{itemize}
