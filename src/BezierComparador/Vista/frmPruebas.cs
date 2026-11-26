@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Drawing.Text;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -531,11 +533,12 @@ namespace BezierComparador
 
             bolEjecutando = true;
             btnEjecutar.Enabled = false;
+            btnEjecutar.Text = "Ejecutando…";
             btnEstabilidad.Enabled = false;
             numRepeticiones.Enabled = false;
             dgvResultados.Rows.Clear();
             prgProgreso.Value = 0;
-            lblEstado.Text = "Estado: Iniciando experimentos...";
+            lblEstado.Text = "Estado: Iniciando experimentos…";
 
             int entRepeticiones = (int)numRepeticiones.Value;
 
@@ -568,6 +571,7 @@ namespace BezierComparador
 
             prgProgreso.Value = 100;
             lblEstado.Text = "Estado: Pruebas completadas. Puede cambiar a la pestana '2. Graficos Comparativos'.";
+            btnEjecutar.Text = "Ejecutar pruebas";
             btnEjecutar.Enabled = true;
             btnEstabilidad.Enabled = true;
             numRepeticiones.Enabled = true;
@@ -584,13 +588,15 @@ namespace BezierComparador
 
             bolEjecutando = true;
             btnEstabilidad.Enabled = false;
-            lblEstado.Text = "Estado: Evaluando estabilidad en grados 50 y 100 contra referencia decimal...";
+            btnEstabilidad.Text = "Evaluando…";
+            lblEstado.Text = "Estado: Evaluando estabilidad en grados 50 y 100 contra referencia decimal…";
 
             List<clsFilaEstabilidad> lstEst = await Task.Run(() =>
                 objControladorPruebas.EjecutarPruebaEstabilidad(1000));
 
             ActualizarEtiquetaEstabilidad(lstEst);
             lblEstado.Text = "Estado: Prueba de estabilidad numerica completada.";
+            btnEstabilidad.Text = "Estabilidad (n=50, 100)";
             btnEstabilidad.Enabled = true;
             bolEjecutando = false;
 
@@ -827,7 +833,7 @@ namespace BezierComparador
                 lstTiemposCasteljau);
         }
 
-        // Dibuja ejes, leyenda y series usando unicamente DrawLine, FillEllipse y DrawString
+        // Dibuja ejes, leyenda y series usando unicamente DrawLine, FillEllipse, FillPolygon y DrawString
         private void DibujarGraficoComparativo(
             Graphics objLienzo,
             Rectangle objArea,
@@ -837,35 +843,64 @@ namespace BezierComparador
             List<double> lstSerieBernstein,
             List<double> lstSerieCasteljau)
         {
-            objLienzo.Clear(Color.White);
+            objLienzo.SmoothingMode = SmoothingMode.AntiAlias;
+            objLienzo.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+            objLienzo.Clear(clsTemaUI.ColSuperficieTarjeta);
 
-            using (Font fntTitulo = new Font("Segoe UI", 9.5F, FontStyle.Bold))
-            using (Font fntEjes = new Font("Segoe UI", 8F, FontStyle.Regular))
+            using (Font fntTitulo = new Font("Segoe UI", 10F, FontStyle.Bold))
+            using (Font fntEjes = new Font("Consolas", 8F, FontStyle.Regular))
+            using (Font fntEtiquetaEje = new Font("Segoe UI", 8.5F, FontStyle.Bold))
             using (Brush brsTexto = new SolidBrush(clsTemaUI.ColTextoPrincipal))
+            using (Brush brsSecundario = new SolidBrush(clsTemaUI.ColTextoSecundario))
+            using (Brush brsFondoPlot = new SolidBrush(clsTemaUI.ColFondoApp))
             using (Pen penEje = new Pen(clsTemaUI.ColTextoSecundario, 1.5F))
             using (Pen penGuia = new Pen(clsTemaUI.ColBordeSutil, 1F))
-            using (Pen penBernstein = new Pen(clsTemaUI.ColPrimario, 2.4F))
-            using (Pen penCasteljau = new Pen(clsTemaUI.ColCasteljauTrazo, 2.4F))
+            using (Pen penBernstein = new Pen(clsTemaUI.ColPrimario, 2.6F))
+            using (Pen penCasteljau = new Pen(clsTemaUI.ColCasteljauTrazo, 2.6F))
+            using (Pen penHaloBlanco = new Pen(Color.White, 1.6F))
             using (Brush brsBernstein = new SolidBrush(clsTemaUI.ColPrimario))
             using (Brush brsCasteljau = new SolidBrush(clsTemaUI.ColCasteljauTrazo))
             {
-                objLienzo.DrawString(cadTitulo, fntTitulo, brsTexto, 14, 8);
+                penGuia.DashStyle = DashStyle.Dot;
+                penBernstein.StartCap = LineCap.Round;
+                penBernstein.EndCap = LineCap.Round;
+                penCasteljau.StartCap = LineCap.Round;
+                penCasteljau.EndCap = LineCap.Round;
+
+                objLienzo.DrawString(cadTitulo, fntTitulo, brsTexto, 16, 10);
 
                 if (lstEtiquetasX.Count == 0)
                 {
+                    int entAnchoVacio = Math.Min(360, objArea.Width - 40);
+                    int entAltoVacio = 74;
+                    int entX0 = (objArea.Width - entAnchoVacio) / 2;
+                    int entY0 = (objArea.Height - entAltoVacio) / 2;
+                    Rectangle objCajaVacia = new Rectangle(Math.Max(12, entX0), Math.Max(40, entY0), Math.Max(120, entAnchoVacio), entAltoVacio);
+
+                    using (Pen penMarcoVacio = new Pen(clsTemaUI.ColBordeTarjeta, 1F))
+                    {
+                        objLienzo.FillRectangle(brsFondoPlot, objCajaVacia);
+                        objLienzo.DrawRectangle(penMarcoVacio, objCajaVacia);
+                    }
                     objLienzo.DrawString(
-                        "Presione 'Ejecutar pruebas' para generar el grafico.",
-                        fntEjes,
+                        "Sin datos experimentales todavia",
+                        fntEtiquetaEje,
                         brsTexto,
-                        20,
-                        objArea.Height / 2 - 10);
+                        objCajaVacia.X + 16,
+                        objCajaVacia.Y + 14);
+                    objLienzo.DrawString(
+                        "Presione 'Ejecutar pruebas' para calcular y trazar las series.",
+                        clsTemaUI.FntEtiquetaPeque,
+                        brsSecundario,
+                        objCajaVacia.X + 16,
+                        objCajaVacia.Y + 38);
                     return;
                 }
 
-                int entMargenIzq = 64;
-                int entMargenDer = 24;
-                int entMargenSup = 36;
-                int entMargenInf = 48;
+                int entMargenIzq = 72;
+                int entMargenDer = 28;
+                int entMargenSup = 44;
+                int entMargenInf = 54;
 
                 int entAnchoGrafico = objArea.Width - entMargenIzq - entMargenDer;
                 int entAltoGrafico = objArea.Height - entMargenSup - entMargenInf;
@@ -877,6 +912,9 @@ namespace BezierComparador
 
                 int entOrigenX = entMargenIzq;
                 int entOrigenY = entMargenSup + entAltoGrafico;
+
+                // Fondo sutil del area de trazado
+                objLienzo.FillRectangle(brsFondoPlot, entOrigenX, entMargenSup, entAnchoGrafico, entAltoGrafico);
 
                 // Determina el valor maximo del eje Y para escalar los puntos
                 double dblMaximoY = 0.0001;
@@ -891,9 +929,9 @@ namespace BezierComparador
                         dblMaximoY = lstSerieCasteljau[entI];
                     }
                 }
-                dblMaximoY = dblMaximoY * 1.12;
+                dblMaximoY = dblMaximoY * 1.15;
 
-                // Dibuja lineas guia horizontales y marcas del eje Y (Tiempo en ms)
+                // Dibuja lineas guia horizontales punteadas y marcas del eje Y (Tiempo en ms)
                 int entDivisionesY = 4;
                 for (int entPaso = 0; entPaso <= entDivisionesY; entPaso++)
                 {
@@ -902,9 +940,12 @@ namespace BezierComparador
                     double dblValorY = dblFraccion * dblMaximoY;
 
                     objLienzo.DrawLine(penGuia, entOrigenX, entY, entOrigenX + entAnchoGrafico, entY);
-                    string cadMarcaY = dblValorY.ToString("F2");
-                    objLienzo.DrawString(cadMarcaY, fntEjes, brsTexto, 6, entY - 7);
+                    string cadMarcaY = dblValorY >= 10.0 ? dblValorY.ToString("F1") : dblValorY.ToString("F2");
+                    SizeF objTamY = objLienzo.MeasureString(cadMarcaY, fntEjes);
+                    objLienzo.DrawString(cadMarcaY, fntEjes, brsSecundario, entOrigenX - objTamY.Width - 6, entY - objTamY.Height / 2F);
                 }
+
+                objLienzo.DrawString("ms", clsTemaUI.FntMonoespacioPeque, brsSecundario, 16, entMargenSup - 14);
 
                 // Dibuja los ejes principales X y Y con DrawLine
                 objLienzo.DrawLine(penEje, entOrigenX, entMargenSup, entOrigenX, entOrigenY);
@@ -930,8 +971,9 @@ namespace BezierComparador
                     arrPuntosBernstein[entI] = new Point(entX, entYBernstein);
                     arrPuntosCasteljau[entI] = new Point(entX, entYCasteljau);
 
-                    objLienzo.DrawLine(penEje, entX, entOrigenY, entX, entOrigenY + 4);
-                    objLienzo.DrawString(lstEtiquetasX[entI], fntEjes, brsTexto, entX - 18, entOrigenY + 6);
+                    objLienzo.DrawLine(penEje, entX, entOrigenY, entX, entOrigenY + 5);
+                    SizeF objTamX = objLienzo.MeasureString(lstEtiquetasX[entI], fntEjes);
+                    objLienzo.DrawString(lstEtiquetasX[entI], fntEjes, brsSecundario, entX - objTamX.Width / 2F, entOrigenY + 8);
                 }
 
                 // Une los puntos consecutivos con segmentos rectos (DrawLine)
@@ -941,23 +983,75 @@ namespace BezierComparador
                     objLienzo.DrawLine(penCasteljau, arrPuntosCasteljau[entI], arrPuntosCasteljau[entI + 1]);
                 }
 
-                // Dibuja los marcadores circulares sobre cada muestra medida
+                // Dibuja marcadores diferenciados por forma y color: circulo (Bernstein) y rombo (De Casteljau)
                 for (int entI = 0; entI < entCantidadPuntos; entI++)
                 {
-                    objLienzo.FillEllipse(brsBernstein, arrPuntosBernstein[entI].X - 4, arrPuntosBernstein[entI].Y - 4, 8, 8);
-                    objLienzo.FillEllipse(brsCasteljau, arrPuntosCasteljau[entI].X - 4, arrPuntosCasteljau[entI].Y - 4, 8, 8);
+                    Point ptoB = arrPuntosBernstein[entI];
+                    objLienzo.FillEllipse(brsBernstein, ptoB.X - 4.5F, ptoB.Y - 4.5F, 9F, 9F);
+                    objLienzo.DrawEllipse(penHaloBlanco, ptoB.X - 4.5F, ptoB.Y - 4.5F, 9F, 9F);
+
+                    Point ptoC = arrPuntosCasteljau[entI];
+                    Point[] arrRombo = new Point[]
+                    {
+                        new Point(ptoC.X, ptoC.Y - 5),
+                        new Point(ptoC.X + 5, ptoC.Y),
+                        new Point(ptoC.X, ptoC.Y + 5),
+                        new Point(ptoC.X - 5, ptoC.Y)
+                    };
+                    objLienzo.FillPolygon(brsCasteljau, arrRombo);
+                    objLienzo.DrawPolygon(penHaloBlanco, arrRombo);
                 }
 
-                // Etiqueta del eje X y leyenda interna
-                objLienzo.DrawString(cadEjeX, fntEjes, brsTexto, entOrigenX + entAnchoGrafico / 2 - 45, objArea.Height - 20);
+                // Anotacion directa del ultimo valor de cada serie para lectura inmediata
+                if (entCantidadPuntos > 0)
+                {
+                    int entUltimo = entCantidadPuntos - 1;
+                    string cadUltB = lstSerieBernstein[entUltimo].ToString("F2") + " ms";
+                    string cadUltC = lstSerieCasteljau[entUltimo].ToString("F2") + " ms";
+                    SizeF objTamB = objLienzo.MeasureString(cadUltB, fntEjes);
+                    SizeF objTamC = objLienzo.MeasureString(cadUltC, fntEjes);
 
-                int entLeyendaX = entOrigenX + 12;
-                int entLeyendaY = entMargenSup + 6;
-                objLienzo.DrawLine(penBernstein, entLeyendaX, entLeyendaY + 6, entLeyendaX + 18, entLeyendaY + 6);
-                objLienzo.DrawString("Bernstein", fntEjes, brsBernstein, entLeyendaX + 22, entLeyendaY - 1);
+                    int entPosYB = arrPuntosBernstein[entUltimo].Y - 18;
+                    int entPosYC = arrPuntosCasteljau[entUltimo].Y - 18;
+                    if (Math.Abs(entPosYB - entPosYC) < 14)
+                    {
+                        entPosYB = Math.Min(entOrigenY - 16, arrPuntosBernstein[entUltimo].Y + 6);
+                    }
 
-                objLienzo.DrawLine(penCasteljau, entLeyendaX + 95, entLeyendaY + 6, entLeyendaX + 113, entLeyendaY + 6);
-                objLienzo.DrawString("De Casteljau", fntEjes, brsCasteljau, entLeyendaX + 117, entLeyendaY - 1);
+                    objLienzo.DrawString(cadUltB, fntEjes, brsBernstein, arrPuntosBernstein[entUltimo].X - objTamB.Width - 6, Math.Max(entMargenSup + 2, entPosYB));
+                    objLienzo.DrawString(cadUltC, fntEjes, brsCasteljau, arrPuntosCasteljau[entUltimo].X - objTamC.Width - 6, Math.Max(entMargenSup + 2, entPosYC));
+                }
+
+                // Etiqueta centrada del eje X
+                SizeF objTamEjeX = objLienzo.MeasureString(cadEjeX, fntEtiquetaEje);
+                objLienzo.DrawString(cadEjeX, fntEtiquetaEje, brsSecundario, entOrigenX + (entAnchoGrafico - objTamEjeX.Width) / 2F, objArea.Height - 22);
+
+                // Caja de leyenda interna diferenciada por forma y color
+                int entLeyendaX = entOrigenX + 10;
+                int entLeyendaY = entMargenSup + 8;
+                Rectangle objCajaLeyenda = new Rectangle(entLeyendaX, entLeyendaY, 214, 24);
+                using (Brush brsCajaLey = new SolidBrush(Color.FromArgb(242, 255, 255, 255)))
+                using (Pen penCajaLey = new Pen(clsTemaUI.ColBordeSutil, 1F))
+                {
+                    objLienzo.FillRectangle(brsCajaLey, objCajaLeyenda);
+                    objLienzo.DrawRectangle(penCajaLey, objCajaLeyenda);
+                }
+
+                objLienzo.DrawLine(penBernstein, entLeyendaX + 8, entLeyendaY + 12, entLeyendaX + 24, entLeyendaY + 12);
+                objLienzo.FillEllipse(brsBernstein, entLeyendaX + 13, entLeyendaY + 9, 6, 6);
+                objLienzo.DrawString("Bernstein", clsTemaUI.FntEtiquetaPequeNegrita, brsBernstein, entLeyendaX + 29, entLeyendaY + 4);
+
+                int entLeyCX = entLeyendaX + 104;
+                objLienzo.DrawLine(penCasteljau, entLeyCX, entLeyendaY + 12, entLeyCX + 16, entLeyendaY + 12);
+                Point[] arrMiniRombo = new Point[]
+                {
+                    new Point(entLeyCX + 8, entLeyendaY + 8),
+                    new Point(entLeyCX + 12, entLeyendaY + 12),
+                    new Point(entLeyCX + 8, entLeyendaY + 16),
+                    new Point(entLeyCX + 4, entLeyendaY + 12)
+                };
+                objLienzo.FillPolygon(brsCasteljau, arrMiniRombo);
+                objLienzo.DrawString("De Casteljau", clsTemaUI.FntEtiquetaPequeNegrita, brsCasteljau, entLeyCX + 21, entLeyendaY + 4);
             }
         }
     }

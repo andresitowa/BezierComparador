@@ -351,10 +351,32 @@ namespace BezierComparador
             trkParametroT.Value = 50;
             trkParametroT.TickFrequency = 10;
             trkParametroT.Dock = DockStyle.Top;
-            trkParametroT.Height = 36;
+            trkParametroT.Height = 34;
             trkParametroT.Margin = new Padding(0, 2, 0, 0);
             trkParametroT.Scroll += TrkParametroT_Scroll;
             tipAyuda.SetToolTip(trkParametroT, "Deslice para ver las subdivisiones de De Casteljau en t");
+
+            TableLayoutPanel tblEscalaT = new TableLayoutPanel();
+            tblEscalaT.Dock = DockStyle.Top;
+            tblEscalaT.Height = 16;
+            tblEscalaT.ColumnCount = 5;
+            for (int entCol = 0; entCol < 5; entCol++)
+            {
+                tblEscalaT.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
+            }
+            string[] arrMarcasT = new string[] { "0.00", "0.25", "0.50", "0.75", "1.00" };
+            for (int entCol = 0; entCol < arrMarcasT.Length; entCol++)
+            {
+                Label lblMarca = new Label();
+                lblMarca.Text = arrMarcasT[entCol];
+                lblMarca.Font = clsTemaUI.FntMonoespacioPeque;
+                lblMarca.ForeColor = clsTemaUI.ColTextoTenue;
+                lblMarca.Dock = DockStyle.Fill;
+                lblMarca.TextAlign = entCol == 0
+                    ? ContentAlignment.MiddleLeft
+                    : (entCol == 4 ? ContentAlignment.MiddleRight : ContentAlignment.MiddleCenter);
+                tblEscalaT.Controls.Add(lblMarca, entCol, 0);
+            }
 
             tblConfig.Controls.Add(lblTitConfig, 0, 0);
             tblConfig.Controls.Add(tblFilaMuestras, 0, 1);
@@ -365,6 +387,7 @@ namespace BezierComparador
             tblConfig.Controls.Add(pnlSepT, 0, 6);
             tblConfig.Controls.Add(lblParametroT, 0, 7);
             tblConfig.Controls.Add(trkParametroT, 0, 8);
+            tblConfig.Controls.Add(tblEscalaT, 0, 9);
             pnlTarjetaConfiguracion.Controls.Add(tblConfig);
 
             // --- TARJETA 3: Resultados y acceso al Laboratorio de Pruebas ---
@@ -603,17 +626,24 @@ namespace BezierComparador
             }
         }
 
-        // Arrastra el punto de control seleccionado y actualiza coordenadas visuales del cursor
+        // Arrastra el punto de control seleccionado y actualiza coordenadas y resalte visual del cursor
         private void PicLienzo_MouseMove(object? objRemitente, MouseEventArgs objArgs)
         {
             lblCoordenadasCursor.Text = "Cursor: X " + objArgs.X.ToString("000") + "  Y " + objArgs.Y.ToString("000");
 
             if (entIndiceArrastrando >= 0 && objArgs.Button == MouseButtons.Left)
             {
+                picLienzo.Cursor = Cursors.SizeAll;
                 double dblX = Math.Max(10, Math.Min(picLienzo.Width - 10, objArgs.X));
                 double dblY = Math.Max(10, Math.Min(picLienzo.Height - 10, objArgs.Y));
                 objControlador.ModificarPunto(entIndiceArrastrando, dblX, dblY);
                 RecalcularYRedibujar(false);
+            }
+            else
+            {
+                int entHover = objControlador.BuscarIndicePuntoCercano(objArgs.X, objArgs.Y, 12.0);
+                picLienzo.EntIndiceHover = entHover;
+                picLienzo.Cursor = entHover >= 0 ? Cursors.SizeAll : Cursors.Cross;
             }
         }
 
@@ -621,6 +651,8 @@ namespace BezierComparador
         private void PicLienzo_MouseLeave(object? objRemitente, EventArgs objArgs)
         {
             lblCoordenadasCursor.Text = "Cursor: X —  Y —";
+            picLienzo.EntIndiceHover = -1;
+            picLienzo.Cursor = Cursors.Cross;
         }
 
         // Suelta el punto arrastrado y actualiza las metricas
@@ -705,6 +737,7 @@ namespace BezierComparador
             int entGrado = objControlador.ObjCurva.ObtenerGrado();
             int entMuestras = (int)numMuestras.Value;
             double dblT = trkParametroT.Value / 100.0;
+            picLienzo.DblParametroTActual = dblT;
 
             lblGradoActual.Text = "n = " + entGrado + " (" + entCantidad + " pts)";
             lblInsigniaGradoCabecera.Text = "Grado n = " + entGrado + " (" + entCantidad + " pts)";
