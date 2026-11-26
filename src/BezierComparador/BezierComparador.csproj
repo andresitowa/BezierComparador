@@ -2,10 +2,19 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- Detecta automaticamente el SDK instalado (.NET 8, .NET 9, .NET 10, .NET 6/7 o .NET Framework 4.7.2) -->
+    <TargetFramework Condition="'$(NETCoreSdkVersion)' != '' And $([System.Version]::Parse('$(NETCoreSdkVersion.Split(`-`)[0])').Major) == 8">net8.0-windows</TargetFramework>
+    <TargetFramework Condition="'$(TargetFramework)' == '' And '$(NETCoreSdkVersion)' != '' And $([System.Version]::Parse('$(NETCoreSdkVersion.Split(`-`)[0])').Major) == 9">net9.0-windows</TargetFramework>
+    <TargetFramework Condition="'$(TargetFramework)' == '' And '$(NETCoreSdkVersion)' != '' And $([System.Version]::Parse('$(NETCoreSdkVersion.Split(`-`)[0])').Major) &gt;= 10">net10.0-windows</TargetFramework>
+    <TargetFramework Condition="'$(TargetFramework)' == '' And '$(NETCoreSdkVersion)' != '' And $([System.Version]::Parse('$(NETCoreSdkVersion.Split(`-`)[0])').Major) == 7">net7.0-windows</TargetFramework>
+    <TargetFramework Condition="'$(TargetFramework)' == '' And '$(NETCoreSdkVersion)' != '' And $([System.Version]::Parse('$(NETCoreSdkVersion.Split(`-`)[0])').Major) == 6">net6.0-windows</TargetFramework>
+    <TargetFramework Condition="'$(TargetFramework)' == ''">net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RollForward>LatestMajor</RollForward>
+    <NoWarn>$(NoWarn);WFO1000</NoWarn>
   </PropertyGroup>
 
 </Project>
