@@ -188,7 +188,12 @@ $1.00$ & $(5.000000;\ 0.000000)$ & $(5.000000;\ 0.000000)$ & $0$ \\
 \end{tabular}
 \end{table}
 
-\capturaPendiente{0.9\textwidth}{7cm}{Salida por consola del proyecto BezierComparador.PruebaManual con el calculo paso a paso de ambos metodos.}{fig:val_consola}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figuras/val_consola.png}
+\caption{Salida por consola del proyecto BezierComparador.PruebaManual con el calculo paso a paso de ambos metodos.}
+\label{fig:val_consola}
+\end{figure}
 
 Como se observa en el Cuadro~\ref{tab:val_comparacion}, los valores de la aplicacion coinciden con los calculados a mano, y la diferencia entre ambos metodos es exactamente cero en los cinco valores de $t$. Esto ocurre porque los puntos de control son enteros y los valores de $t$ son fracciones con denominador potencia de dos ($1/4$, $1/2$, $3/4$). Todos los resultados intermedios pueden representarse de forma exacta en punto flotante binario, por lo que no se produce error de redondeo. Con otros valores de $t$ o con grados mayores aparecen diferencias pequenas, que se analizan en la Seccion~\ref{sec:comparacion}.
 
