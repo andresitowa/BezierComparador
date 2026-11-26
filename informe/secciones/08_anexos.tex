@@ -1,0 +1,529 @@
+\section{Anexos}
+\label{sec:anexos}
+
+En esta seccion se incluye el codigo fuente completo del Modelo matematico y la salida completa de la validacion manual de la Seccion~\ref{sec:validacion}. El codigo corresponde a la carpeta \texttt{src/BezierComparador/Modelo} del repositorio.
+
+\subsection{Codigo Fuente del Modelo Matematico}
+\label{subsec:anx_codigo}
+
+El Listado~\ref{lst:anx_bernstein} implementa la Ecuacion~\ref{eq:bernstein} con coeficientes binomiales precalculados. El Listado~\ref{lst:anx_casteljau} implementa la Ecuacion~\ref{eq:casteljau} y el metodo \texttt{ObtenerNivelesIntermedios}, que usa la Vista para dibujar las interpolaciones. El Listado~\ref{lst:anx_comparador} calcula las diferencias numericas entre ambos metodos y el Listado~\ref{lst:anx_curva} administra los puntos de control.
+
+\begin{lstlisting}[language={[Sharp]C}, caption={Clase clsEvaluadorBernstein (evaluacion con polinomios de Bernstein).}, label={lst:anx_bernstein}]
+using System;
+using System.Collections.Generic;
+
+namespace BezierComparador
+{
+    // Evalua la curva de Bezier en forma directa con polinomios de Bernstein
+    // Complejidad: O(n) por muestra, O(N * n) para N muestras
+    public class clsEvaluadorBernstein : IEvaluadorCurva
+    {
+        public string CadNombre
+        {
+            get { return "Bernstein"; }
+        }
+
+        // Formula: B(t) = suma para i=0..n de C(n,i) * (1-t)^(n-i) * t^i * P_i
+        // Parametro: dblT = k / (entMuestras - 1), con k de 0 a entMuestras - 1
+        // Los coeficientes C(n,i) se calculan una sola vez, fuera del ciclo de muestras
+        public clsResultadoEvaluacion Evaluar(List<clsPuntoControl> lstPuntos, int entMuestras)
+        {
+            clsResultadoEvaluacion objResultado = new clsResultadoEvaluacion(CadNombre);
+
+            // Valida minimo 2 puntos de control y 2 muestras
+            if (lstPuntos == null || lstPuntos.Count < clsCurvaBezier.entMinimoPuntos || entMuestras < 2)
+            {
+                return objResultado;
+            }
+
+            int entN = lstPuntos.Count - 1;
+            double[] arrCoeficientes = CalcularCoeficientesBinomiales(entN);
+            clsPuntoControl[] arrCurva = new clsPuntoControl[entMuestras];
+
+            // Recorre cada muestra del parametro t entre 0 y 1
+            for (int entK = 0; entK < entMuestras; entK++)
+            {
+                double dblT = (double)entK / (double)(entMuestras - 1);
+                double dblSumaX = 0.0;
+                double dblSumaY = 0.0;
+
+                // Suma ponderada de los puntos de control: n + 1 terminos, O(n)
+                for (int entI = 0; entI <= entN; entI++)
+                {
+                    double dblBase = CalcularBase(arrCoeficientes[entI], entN, entI, dblT);
+                    dblSumaX += dblBase * lstPuntos[entI].dblX;
+                    dblSumaY += dblBase * lstPuntos[entI].dblY;
+                }
+
+                arrCurva[entK] = new clsPuntoControl(dblSumaX, dblSumaY);
+            }
+
+            objResultado.arrPuntosCurva = arrCurva;
+            return objResultado;
+        }
+
+        // Formula: C(n,0) = 1 y C(n,i) = C(n,i-1) * (n - i + 1) / i
+        // Iterativo sin factorial para evitar desbordamiento, O(n)
+        public double[] CalcularCoeficientesBinomiales(int entN)
+        {
+            double[] arrCoef = new double[entN + 1];
+            arrCoef[0] = 1.0;
+
+            for (int entI = 1; entI <= entN; entI++)
+            {
+                arrCoef[entI] = arrCoef[entI - 1] * (double)(entN - entI + 1) / (double)entI;
+            }
+
+            return arrCoef;
+        }
+
+        // Formula: B_{i,n}(t) = C(n,i) * (1-t)^(n-i) * t^i
+        public double CalcularBase(double dblCoeficiente, int entN, int entI, double dblT)
+        {
+            double dblPotenciaUnoMenosT = ElevarPotencia(1.0 - dblT, entN - entI);
+            double dblPotenciaT = ElevarPotencia(dblT, entI);
+            return dblCoeficiente * dblPotenciaUnoMenosT * dblPotenciaT;
+        }
+
+        // Calcula base^exponente con Math.Pow, tomando 0^0 = 1
+        // Asi en t = 0 y t = 1 la curva pasa exacto por P_0 y P_n
+        private double ElevarPotencia(double dblBase, int entExponente)
+        {
+            if (entExponente == 0)
+            {
+                return 1.0;
+            }
+            return Math.Pow(dblBase, entExponente);
+        }
+    }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language={[Sharp]C}, caption={Clase clsEvaluadorDeCasteljau (algoritmo de De Casteljau).}, label={lst:anx_casteljau}]
+using System.Collections.Generic;
+
+namespace BezierComparador
+{
+    // Evalua la curva de Bezier con interpolaciones lineales sucesivas (De Casteljau)
+    // Complejidad: O(n^2) por muestra, O(N * n^2) para N muestras
+    public class clsEvaluadorDeCasteljau : IEvaluadorCurva
+    {
+        public string CadNombre
+        {
+            get { return "De Casteljau"; }
+        }
+
+        // Formula: P_i^(r) = (1-t) * P_i^(r-1) + t * P_(i+1)^(r-1)
+        // r de 1..n, i de 0..n-r. El punto de la curva es P_0^(n)
+        // Parametro: dblT = k / (entMuestras - 1), con k de 0 a entMuestras - 1
+        public clsResultadoEvaluacion Evaluar(List<clsPuntoControl> lstPuntos, int entMuestras)
+        {
+            clsResultadoEvaluacion objResultado = new clsResultadoEvaluacion(CadNombre);
+
+            // Valida minimo 2 puntos de control y 2 muestras
+            if (lstPuntos == null || lstPuntos.Count < clsCurvaBezier.entMinimoPuntos || entMuestras < 2)
+            {
+                return objResultado;
+            }
+
+            int entN = lstPuntos.Count - 1;
+            clsPuntoControl[] arrCurva = new clsPuntoControl[entMuestras];
+
+            // Arreglos de trabajo para la copia de X y Y (se reservan una sola vez)
+            double[] arrX = new double[entN + 1];
+            double[] arrY = new double[entN + 1];
+
+            // Recorre cada muestra del parametro t entre 0 y 1
+            for (int entK = 0; entK < entMuestras; entK++)
+            {
+                double dblT = (double)entK / (double)(entMuestras - 1);
+                double dblUnoMenosT = 1.0 - dblT;
+
+                // Copia los puntos de control (nivel r = 0) para no alterar la lista original
+                for (int entI = 0; entI <= entN; entI++)
+                {
+                    arrX[entI] = lstPuntos[entI].dblX;
+                    arrY[entI] = lstPuntos[entI].dblY;
+                }
+
+                // Reduce por niveles: cada nivel tiene un punto menos, n(n+1)/2 operaciones
+                for (int entR = 1; entR <= entN; entR++)
+                {
+                    for (int entI = 0; entI <= entN - entR; entI++)
+                    {
+                        arrX[entI] = dblUnoMenosT * arrX[entI] + dblT * arrX[entI + 1];
+                        arrY[entI] = dblUnoMenosT * arrY[entI] + dblT * arrY[entI + 1];
+                    }
+                }
+
+                // Al final del ultimo nivel queda P_0^(n), el punto de la curva
+                arrCurva[entK] = new clsPuntoControl(arrX[0], arrY[0]);
+            }
+
+            objResultado.arrPuntosCurva = arrCurva;
+            return objResultado;
+        }
+
+        // Formula: P_i^(r) = (1-t) * P_i^(r-1) + t * P_(i+1)^(r-1) para un t fijo
+        // Devuelve todos los niveles: nivel 0 = puntos de control, nivel n = punto de la curva
+        // Se usa para dibujar las interpolaciones (no para medir tiempos)
+        public List<List<clsPuntoControl>> ObtenerNivelesIntermedios(List<clsPuntoControl> lstPuntos, double dblT)
+        {
+            List<List<clsPuntoControl>> lstNiveles = new List<List<clsPuntoControl>>();
+
+            if (lstPuntos == null || lstPuntos.Count < clsCurvaBezier.entMinimoPuntos)
+            {
+                return lstNiveles;
+            }
+
+            // Mantiene t dentro del intervalo [0, 1]
+            if (dblT < 0.0)
+            {
+                dblT = 0.0;
+            }
+            if (dblT > 1.0)
+            {
+                dblT = 1.0;
+            }
+            double dblUnoMenosT = 1.0 - dblT;
+
+            // Nivel 0: copia de los puntos de control
+            List<clsPuntoControl> lstNivelCero = new List<clsPuntoControl>();
+            for (int entI = 0; entI < lstPuntos.Count; entI++)
+            {
+                lstNivelCero.Add(lstPuntos[entI].Clonar());
+            }
+            lstNiveles.Add(lstNivelCero);
+
+            // Niveles 1..n: interpola cada par de puntos consecutivos del nivel anterior
+            int entN = lstPuntos.Count - 1;
+            for (int entR = 1; entR <= entN; entR++)
+            {
+                List<clsPuntoControl> lstAnterior = lstNiveles[entR - 1];
+                List<clsPuntoControl> lstNuevo = new List<clsPuntoControl>();
+
+                for (int entI = 0; entI <= entN - entR; entI++)
+                {
+                    double dblX = dblUnoMenosT * lstAnterior[entI].dblX + dblT * lstAnterior[entI + 1].dblX;
+                    double dblY = dblUnoMenosT * lstAnterior[entI].dblY + dblT * lstAnterior[entI + 1].dblY;
+                    lstNuevo.Add(new clsPuntoControl(dblX, dblY));
+                }
+
+                lstNiveles.Add(lstNuevo);
+            }
+
+            return lstNiveles;
+        }
+    }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language={[Sharp]C}, caption={Clase clsComparador (diferencias numericas entre ambos metodos).}, label={lst:anx_comparador}]
+using System;
+
+namespace BezierComparador
+{
+    // Calcula la diferencia numerica punto a punto entre dos curvas evaluadas
+    public class clsComparador
+    {
+        // Formula por muestra: d_k = raiz((x1 - x2)^2 + (y1 - y2)^2)
+        // Maxima: max(d_k). Promedio: (1/M) * suma(d_k)
+        // Error cuadratico medio: ECM = (1/M) * suma(d_k^2)
+        // M = cantidad de muestras comparadas. Complejidad O(M)
+        public clsResultadoComparacion Comparar(clsPuntoControl[] arrCurvaA, clsPuntoControl[] arrCurvaB)
+        {
+            clsResultadoComparacion objResultado = new clsResultadoComparacion();
+
+            if (arrCurvaA == null || arrCurvaB == null)
+            {
+                return objResultado;
+            }
+
+            // Si los tamanos difieren solo se comparan las muestras comunes
+            int entCantidad = Math.Min(arrCurvaA.Length, arrCurvaB.Length);
+            if (entCantidad == 0)
+            {
+                return objResultado;
+            }
+
+            double dblMaximo = 0.0;
+            double dblSumaDistancias = 0.0;
+            double dblSumaCuadrados = 0.0;
+
+            // Recorre cada muestra k y acumula la distancia entre ambos puntos
+            for (int entK = 0; entK < entCantidad; entK++)
+            {
+                double dblDifX = arrCurvaA[entK].dblX - arrCurvaB[entK].dblX;
+                double dblDifY = arrCurvaA[entK].dblY - arrCurvaB[entK].dblY;
+                double dblDistanciaCuadrada = dblDifX * dblDifX + dblDifY * dblDifY;
+                double dblDistancia = Math.Sqrt(dblDistanciaCuadrada);
+
+                if (dblDistancia > dblMaximo)
+                {
+                    dblMaximo = dblDistancia;
+                }
+
+                dblSumaDistancias += dblDistancia;
+                dblSumaCuadrados += dblDistanciaCuadrada;
+            }
+
+            objResultado.dblDiferenciaMaxima = dblMaximo;
+            objResultado.dblDiferenciaPromedio = dblSumaDistancias / entCantidad;
+            objResultado.dblErrorCuadraticoMedio = dblSumaCuadrados / entCantidad;
+            objResultado.entMuestrasComparadas = entCantidad;
+            return objResultado;
+        }
+
+        // Compara directamente dos resultados de evaluacion
+        public clsResultadoComparacion Comparar(clsResultadoEvaluacion objResultadoA, clsResultadoEvaluacion objResultadoB)
+        {
+            if (objResultadoA == null || objResultadoB == null)
+            {
+                return new clsResultadoComparacion();
+            }
+            return Comparar(objResultadoA.arrPuntosCurva, objResultadoB.arrPuntosCurva);
+        }
+    }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language={[Sharp]C}, caption={Clase clsCurvaBezier (gestion de puntos de control y validaciones).}, label={lst:anx_curva}]
+using System.Collections.Generic;
+
+namespace BezierComparador
+{
+    // Almacena y gestiona los puntos de control de una curva de Bezier
+    public class clsCurvaBezier
+    {
+        // Minimo de puntos para poder evaluar (curva de grado 1)
+        public const int entMinimoPuntos = 2;
+
+        public List<clsPuntoControl> lstPuntosControl;
+
+        public List<clsPuntoControl> LstPuntosControl
+        {
+            get { return lstPuntosControl; }
+            set { lstPuntosControl = value; }
+        }
+
+        public clsCurvaBezier()
+        {
+            lstPuntosControl = new List<clsPuntoControl>();
+        }
+
+        // Formula: grado n = cantidad de puntos - 1
+        public int ObtenerGrado()
+        {
+            return lstPuntosControl.Count - 1;
+        }
+
+        // Devuelve cuantos puntos de control tiene la curva
+        public int ObtenerCantidadPuntos()
+        {
+            return lstPuntosControl.Count;
+        }
+
+        // Verifica que el indice exista dentro de la lista
+        public bool EsIndiceValido(int entIndice)
+        {
+            return entIndice >= 0 && entIndice < lstPuntosControl.Count;
+        }
+
+        // Verifica que haya al menos 2 puntos para evaluar
+        public bool PuedeEvaluar()
+        {
+            return lstPuntosControl.Count >= entMinimoPuntos;
+        }
+
+        // Mensaje para el usuario si la curva no se puede evaluar
+        public string ObtenerMensajeValidacion()
+        {
+            if (PuedeEvaluar())
+            {
+                return "";
+            }
+            return "Agregue al menos " + entMinimoPuntos + " puntos";
+        }
+
+        // Agrega un punto al final; devuelve false si es nulo
+        public bool AgregarPunto(clsPuntoControl ptoNuevo)
+        {
+            if (ptoNuevo == null)
+            {
+                return false;
+            }
+            lstPuntosControl.Add(ptoNuevo);
+            return true;
+        }
+
+        // Agrega un punto con coordenadas X y Y
+        public bool AgregarPunto(double dblX, double dblY)
+        {
+            return AgregarPunto(new clsPuntoControl(dblX, dblY));
+        }
+
+        // Devuelve el punto del indice o null si el indice no existe
+        public clsPuntoControl? ObtenerPunto(int entIndice)
+        {
+            if (!EsIndiceValido(entIndice))
+            {
+                return null;
+            }
+            return lstPuntosControl[entIndice];
+        }
+
+        // Elimina el punto del indice; devuelve false si el indice no existe
+        public bool EliminarPunto(int entIndice)
+        {
+            if (!EsIndiceValido(entIndice))
+            {
+                return false;
+            }
+            lstPuntosControl.RemoveAt(entIndice);
+            return true;
+        }
+
+        // Cambia las coordenadas del punto; devuelve false si el indice no existe
+        public bool ModificarPunto(int entIndice, double dblX, double dblY)
+        {
+            if (!EsIndiceValido(entIndice))
+            {
+                return false;
+            }
+            lstPuntosControl[entIndice].dblX = dblX;
+            lstPuntosControl[entIndice].dblY = dblY;
+            return true;
+        }
+
+        // Elimina todos los puntos de control
+        public void Limpiar()
+        {
+            lstPuntosControl.Clear();
+        }
+    }
+}
+\end{lstlisting}
+
+% Andres y Joseph: agregar aqui como \subsection el codigo completo de sus clases
+% (clsMedidor, clsControladorPruebas, clsControladorCurva, ctlLienzo, etc.)
+% con el mismo formato lstlisting y etiquetas lst:anx_<nombre>.
+
+\subsection{Salida Completa de la Validacion Manual}
+\label{subsec:anx_salida}
+
+El Listado~\ref{lst:anx_salida} muestra la salida del proyecto de consola \texttt{BezierComparador.PruebaManual}, guardada en el archivo \texttt{validacion\_manual.txt}. Para regenerarla se ejecuta \texttt{dotnet run --project src/BezierComparador.PruebaManual} desde la raiz del repositorio.
+
+\begin{lstlisting}[caption={Salida de la validacion manual de la curva cubica.}, label={lst:anx_salida}, basicstyle=\ttfamily\scriptsize]
+VALIDACION MATEMATICA MANUAL - CURVA CUBICA (n = 3)
+Puntos de control:
+  P0 = (0.000000, 0.000000)
+  P1 = (1.000000, 3.000000)
+  P2 = (4.000000, 3.000000)
+  P3 = (5.000000, 0.000000)
+
+Coeficientes binomiales C(3,i): 1 3 3 1 
+
+==================================================
+t = 0.00   (1 - t = 1.00)
+==================================================
+[Bernstein]  B(t) = suma C(n,i) * (1-t)^(n-i) * t^i * P_i
+  i=0: B0,3 = 1 * 1.00^3 * 0.00^0 = 1.000000  ->  B * P0 = (0.000000, 0.000000)
+  i=1: B1,3 = 3 * 1.00^2 * 0.00^1 = 0.000000  ->  B * P1 = (0.000000, 0.000000)
+  i=2: B2,3 = 3 * 1.00^1 * 0.00^2 = 0.000000  ->  B * P2 = (0.000000, 0.000000)
+  i=3: B3,3 = 1 * 1.00^0 * 0.00^3 = 0.000000  ->  B * P3 = (0.000000, 0.000000)
+  Suma: B(0.00) = (0.000000, 0.000000)
+[De Casteljau]  P_i^(r) = (1-t) * P_i^(r-1) + t * P_(i+1)^(r-1)
+  r=0: P0^(0)=(0.000000, 0.000000)  P1^(0)=(1.000000, 3.000000)  P2^(0)=(4.000000, 3.000000)  P3^(0)=(5.000000, 0.000000)  
+  r=1: P0^(1)=(0.000000, 0.000000)  P1^(1)=(1.000000, 3.000000)  P2^(1)=(4.000000, 3.000000)  
+  r=2: P0^(2)=(0.000000, 0.000000)  P1^(2)=(1.000000, 3.000000)  
+  r=3: P0^(3)=(0.000000, 0.000000)  
+  Resultado: C(0.00) = (0.000000, 0.000000)
+Diferencia |Bernstein - De Casteljau| = 0.000E+000
+
+==================================================
+t = 0.25   (1 - t = 0.75)
+==================================================
+[Bernstein]  B(t) = suma C(n,i) * (1-t)^(n-i) * t^i * P_i
+  i=0: B0,3 = 1 * 0.75^3 * 0.25^0 = 0.421875  ->  B * P0 = (0.000000, 0.000000)
+  i=1: B1,3 = 3 * 0.75^2 * 0.25^1 = 0.421875  ->  B * P1 = (0.421875, 1.265625)
+  i=2: B2,3 = 3 * 0.75^1 * 0.25^2 = 0.140625  ->  B * P2 = (0.562500, 0.421875)
+  i=3: B3,3 = 1 * 0.75^0 * 0.25^3 = 0.015625  ->  B * P3 = (0.078125, 0.000000)
+  Suma: B(0.25) = (1.062500, 1.687500)
+[De Casteljau]  P_i^(r) = (1-t) * P_i^(r-1) + t * P_(i+1)^(r-1)
+  r=0: P0^(0)=(0.000000, 0.000000)  P1^(0)=(1.000000, 3.000000)  P2^(0)=(4.000000, 3.000000)  P3^(0)=(5.000000, 0.000000)  
+  r=1: P0^(1)=(0.250000, 0.750000)  P1^(1)=(1.750000, 3.000000)  P2^(1)=(4.250000, 2.250000)  
+  r=2: P0^(2)=(0.625000, 1.312500)  P1^(2)=(2.375000, 2.812500)  
+  r=3: P0^(3)=(1.062500, 1.687500)  
+  Resultado: C(0.25) = (1.062500, 1.687500)
+Diferencia |Bernstein - De Casteljau| = 0.000E+000
+
+==================================================
+t = 0.50   (1 - t = 0.50)
+==================================================
+[Bernstein]  B(t) = suma C(n,i) * (1-t)^(n-i) * t^i * P_i
+  i=0: B0,3 = 1 * 0.50^3 * 0.50^0 = 0.125000  ->  B * P0 = (0.000000, 0.000000)
+  i=1: B1,3 = 3 * 0.50^2 * 0.50^1 = 0.375000  ->  B * P1 = (0.375000, 1.125000)
+  i=2: B2,3 = 3 * 0.50^1 * 0.50^2 = 0.375000  ->  B * P2 = (1.500000, 1.125000)
+  i=3: B3,3 = 1 * 0.50^0 * 0.50^3 = 0.125000  ->  B * P3 = (0.625000, 0.000000)
+  Suma: B(0.50) = (2.500000, 2.250000)
+[De Casteljau]  P_i^(r) = (1-t) * P_i^(r-1) + t * P_(i+1)^(r-1)
+  r=0: P0^(0)=(0.000000, 0.000000)  P1^(0)=(1.000000, 3.000000)  P2^(0)=(4.000000, 3.000000)  P3^(0)=(5.000000, 0.000000)  
+  r=1: P0^(1)=(0.500000, 1.500000)  P1^(1)=(2.500000, 3.000000)  P2^(1)=(4.500000, 1.500000)  
+  r=2: P0^(2)=(1.500000, 2.250000)  P1^(2)=(3.500000, 2.250000)  
+  r=3: P0^(3)=(2.500000, 2.250000)  
+  Resultado: C(0.50) = (2.500000, 2.250000)
+Diferencia |Bernstein - De Casteljau| = 0.000E+000
+
+==================================================
+t = 0.75   (1 - t = 0.25)
+==================================================
+[Bernstein]  B(t) = suma C(n,i) * (1-t)^(n-i) * t^i * P_i
+  i=0: B0,3 = 1 * 0.25^3 * 0.75^0 = 0.015625  ->  B * P0 = (0.000000, 0.000000)
+  i=1: B1,3 = 3 * 0.25^2 * 0.75^1 = 0.140625  ->  B * P1 = (0.140625, 0.421875)
+  i=2: B2,3 = 3 * 0.25^1 * 0.75^2 = 0.421875  ->  B * P2 = (1.687500, 1.265625)
+  i=3: B3,3 = 1 * 0.25^0 * 0.75^3 = 0.421875  ->  B * P3 = (2.109375, 0.000000)
+  Suma: B(0.75) = (3.937500, 1.687500)
+[De Casteljau]  P_i^(r) = (1-t) * P_i^(r-1) + t * P_(i+1)^(r-1)
+  r=0: P0^(0)=(0.000000, 0.000000)  P1^(0)=(1.000000, 3.000000)  P2^(0)=(4.000000, 3.000000)  P3^(0)=(5.000000, 0.000000)  
+  r=1: P0^(1)=(0.750000, 2.250000)  P1^(1)=(3.250000, 3.000000)  P2^(1)=(4.750000, 0.750000)  
+  r=2: P0^(2)=(2.625000, 2.812500)  P1^(2)=(4.375000, 1.312500)  
+  r=3: P0^(3)=(3.937500, 1.687500)  
+  Resultado: C(0.75) = (3.937500, 1.687500)
+Diferencia |Bernstein - De Casteljau| = 0.000E+000
+
+==================================================
+t = 1.00   (1 - t = 0.00)
+==================================================
+[Bernstein]  B(t) = suma C(n,i) * (1-t)^(n-i) * t^i * P_i
+  i=0: B0,3 = 1 * 0.00^3 * 1.00^0 = 0.000000  ->  B * P0 = (0.000000, 0.000000)
+  i=1: B1,3 = 3 * 0.00^2 * 1.00^1 = 0.000000  ->  B * P1 = (0.000000, 0.000000)
+  i=2: B2,3 = 3 * 0.00^1 * 1.00^2 = 0.000000  ->  B * P2 = (0.000000, 0.000000)
+  i=3: B3,3 = 1 * 0.00^0 * 1.00^3 = 1.000000  ->  B * P3 = (5.000000, 0.000000)
+  Suma: B(1.00) = (5.000000, 0.000000)
+[De Casteljau]  P_i^(r) = (1-t) * P_i^(r-1) + t * P_(i+1)^(r-1)
+  r=0: P0^(0)=(0.000000, 0.000000)  P1^(0)=(1.000000, 3.000000)  P2^(0)=(4.000000, 3.000000)  P3^(0)=(5.000000, 0.000000)  
+  r=1: P0^(1)=(1.000000, 3.000000)  P1^(1)=(4.000000, 3.000000)  P2^(1)=(5.000000, 0.000000)  
+  r=2: P0^(2)=(4.000000, 3.000000)  P1^(2)=(5.000000, 0.000000)  
+  r=3: P0^(3)=(5.000000, 0.000000)  
+  Resultado: C(1.00) = (5.000000, 0.000000)
+Diferencia |Bernstein - De Casteljau| = 0.000E+000
+
+RESUMEN
+  t     | Bernstein                | De Casteljau
+  0.00  | (0.000000, 0.000000)     | (0.000000, 0.000000)
+  0.25  | (1.062500, 1.687500)     | (1.062500, 1.687500)
+  0.50  | (2.500000, 2.250000)     | (2.500000, 2.250000)
+  0.75  | (3.937500, 1.687500)     | (3.937500, 1.687500)
+  1.00  | (5.000000, 0.000000)     | (5.000000, 0.000000)
+
+Verificacion con Evaluar(lstPuntos, 5) de cada clase:
+  Diferencia maxima       = 0.000E+000
+  Diferencia promedio     = 0.000E+000
+  Error cuadratico medio  = 0.000E+000
+\end{lstlisting}
+
+% RESUMEN: Esta seccion (08_anexos.tex) contiene el codigo completo del Modelo
+% (lst:anx_bernstein, lst:anx_casteljau, lst:anx_comparador, lst:anx_curva) y la salida
+% completa de la validacion manual (lst:anx_salida, subsec:anx_salida). El codigo se copio
+% de los archivos reales del repositorio; si el Modelo cambia, se debe actualizar aqui.
+% Andres y Joseph pueden agregar el codigo de sus clases en el lugar indicado.
